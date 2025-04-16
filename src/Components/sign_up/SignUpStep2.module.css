@@ -1,0 +1,9 @@
+.errorCollapse {
+    overflow: hidden;
+    transition: height 0.3s ease;
+    height: 0;
+  }
+  .errorCollapseOpen {
+    height: auto;
+  }
+  
