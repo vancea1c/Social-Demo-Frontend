@@ -4,11 +4,13 @@ import Greeting_page from "./Components/pages/Greeting_page";
 import SignIn_page from "./Components/pages/SignIn_page";
 import SignUpPage from "./Components/pages/SignUpPage";
 import HomePage from "./Components/pages/HomePage";
+import ExplorePage from "./Components/pages/ExplorePage";
+import ProfilePage from "./Components/pages/ProfilePage";
 import ProtectedRoute from "./hoc/ProtectedRoute";
 import "./App.css";
 import ForgotPwPage from "./Components/pages/ForgotPwPage";
 import TestingPage from "./Components/pages/TestingPage";
-
+import "./styles.css";
 function App() {
   return (
     <>
@@ -28,6 +30,22 @@ function App() {
               </ProtectedRoute>
             }
           />
+          {/* <Route
+            path="/explore"
+            element={
+              <ProtectedRoute>
+                <ExplorePage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/profile/:username"
+            element={
+              <ProtectedRoute>
+                <ProfilePage />
+              </ProtectedRoute>
+            }
+          /> */}
         </Routes>
       </AuthProvider>
     </>

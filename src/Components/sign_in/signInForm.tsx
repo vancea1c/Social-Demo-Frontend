@@ -17,20 +17,36 @@ const SignInForm = () => {
   } = useForm<SignInData>({
     resolver: zodResolver(signInSchema),
   });
-  // Control pentru a afișa/ascunde parola
+  const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
+  const [showForgot, setShowForgot] = useState(false);
+
   const onSubmit = async (data: SignInData) => {
+    setShowForgot(false);
+    setLoading(true);
     try {
       await signIn(data);
+
       navigate("/home");
     } catch (error: any) {
-      if (error.response && error.response.data) {
-        const serverErrors = error.response.data;
-        for (const field in serverErrors) {
-          setError(field as keyof SignInData, {
-            type: "server",
-            message: serverErrors[field][0],
-          });
+      const resp = error.response?.data;
+      if (resp) {
+        setLoading(false);
+        // ② mapare erori server pe câmpuri
+        for (const field of ["identifier", "password"] as const) {
+          if (resp[field]) {
+            const msg = Array.isArray(resp[field])
+              ? resp[field][0]
+              : resp[field];
+            setError(field, { type: "server", message: msg });
+          }
+        }
+        // ③ dacă mesajul de password e exact „Incorrect password.”, afișăm Forgot
+        const pwErr = Array.isArray(resp.password)
+          ? resp.password[0]
+          : resp.password;
+        if (pwErr === "Incorrect password.") {
+          setShowForgot(true);
         }
       }
     }
@@ -84,11 +100,18 @@ const SignInForm = () => {
         </div>
         <div className="footer">
           <button type="submit" form="signin-form">
-            Log In
+            {loading ? "Login in.." : "Log in"}
           </button>
-          <button onClick={() => navigate("/forgot_password")}>
-            Forgot Password
-          </button>
+          {showForgot && (
+            <button
+              type="button"
+              onClick={() => navigate("/forgot_password")}
+              className="link-button"
+              style={{ marginLeft: "1rem" }}
+            >
+              Forgot Password?
+            </button>
+          )}
         </div>
       </div>
     </div>

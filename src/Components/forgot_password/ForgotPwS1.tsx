@@ -1,73 +1,66 @@
-import { useEffect, useState } from "react";
-import { useForgotPwContext } from "./ForgotPwContext";
-import { useForm } from "react-hook-form";
-import { zodResolver } from "@hookform/resolvers/zod";
-import { forgotPwSchema, ForgotPwFormData } from "../schemas/forgotPwSchema";
+import { useState } from "react";
 import axios from "axios";
+import { useForgotPwContext } from "./ForgotPwContext";
 
-const ForgotPwS1 = () => {
-  const { nextStep, setFormData } = useForgotPwContext();
+const ForgotPwStep1 = () => {
+  const { setFormData, nextStep } = useForgotPwContext();
+  const [identifier, setIdentifier] = useState("");
+  const [error, setError] = useState<string | null>(null);
+  const [loading, setLoading] = useState(false);
 
-  const {
-    register,
-    handleSubmit,
-    setError,
-    formState: { errors },
-  } = useForm<ForgotPwFormData>({
-    mode: "onChange",
-    resolver: zodResolver(forgotPwSchema),
-  });
-
-  const onSubmit = async (data: ForgotPwFormData) => {
-    console.log("Submitting data", data);
+  const handleSendCode = async (identifier: string) => {
+    setError(null);
+    setLoading(true);
     try {
-      await axios.post("http://localhost:8000/api/forgot_password/", data);
-      setFormData(data);
+      // ① apelează endpoint-ul de trimitere cod
+      console.log("buna ziua!!");
+      const res = await axios.post("/api/accounts/forgot-password/", {
+        identifier,
+      });
+      console.log(res);
+      // ② salvează identifier în context
+      setFormData({ identifier });
+      // ③ treci la pasul următor (step 2: verify)
       nextStep();
-    } catch (error: any) {
-      if (error.response && error.response.data) {
-        const serverErrors = error.response.data;
-        for (const field in serverErrors) {
-          setError(field as keyof ForgotPwFormData, {
-            type: "server",
-            message: serverErrors[field][0],
-          });
-        }
-      }
+    } catch (err: any) {
+      setError(
+        err.response?.data?.identifier?.[0] ||
+          err.response?.data?.detail ||
+          "Failed to send code"
+      );
+    } finally {
+      setLoading(false);
     }
   };
+
   return (
     <div className="form">
-      <div className="form-container">
-        <div className="header">
-          <h2>Find your Social account</h2>
-          <p>
-            Enter the email or username associated with your account to change
-            your password.
-          </p>
-        </div>
-        <div className="body">
-          <form id="forgotpw-form" onSubmit={handleSubmit(onSubmit)}>
-            <div className="form-group">
-              <label htmlFor="usn/e" className="form-label">
-                Username or Email
-              </label>
-              <input id="usn/e" {...register("identifier")} />
-              <input type="hidden" value={1} {...register("step")} />
-              {errors.identifier && (
-                <p className="text-danger">{errors.identifier.message}</p>
-              )}
-            </div>
-          </form>
-        </div>
-        <div className="footer">
-          <button type="submit" form="forgotpw-form">
-            Next
-          </button>
-        </div>
+      <div className="header">
+        <h2>Account recovery</h2>
+        <p>Enter your email or username to receive a reset code.</p>
+      </div>
+      <div className="body">
+        <label htmlFor="identifier">Email or Username</label>
+        <input
+          id="identifier"
+          type="text"
+          value={identifier}
+          onChange={(e) => setIdentifier(e.target.value)}
+          disabled={loading}
+        />
+        {error && <p className="text-danger">{error}</p>}
+      </div>
+      <div className="footer">
+        <button
+          type="button"
+          onClick={() => handleSendCode(identifier)}
+          disabled={!identifier.trim() || loading}
+        >
+          {loading ? "Sending…" : "Send Code"}
+        </button>
       </div>
     </div>
   );
 };
 
-export default ForgotPwS1;
+export default ForgotPwStep1;

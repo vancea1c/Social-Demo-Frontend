@@ -1,4 +1,5 @@
 import { createContext, useContext, useState, ReactNode } from "react";
+import { useLocation } from "react-router-dom";
 
 export type ForgotPwFormData = {
   identifier?: string;
@@ -12,6 +13,7 @@ interface ForgotPwContextProps {
   prevStep: () => void;
   formData: { [key: string]: any };
   setFormData: (data: Partial<ForgotPwFormData>) => void;
+  resetFlow: () => void;
 }
 
 const ForgotPwContext = createContext<ForgotPwContextProps | undefined>(
@@ -32,8 +34,13 @@ interface ForgotPwProviderProps {
 }
 
 export const ForgotPwProvider = ({ children }: ForgotPwProviderProps) => {
+  const location = useLocation();
+  const navId = (location.state as any)?.identifier as string | undefined;
+
   const [step, setStep] = useState(1);
-  const [formData, setFormDataState] = useState<ForgotPwFormData>({});
+  const [formData, setFormDataState] = useState<ForgotPwFormData>({
+    identifier: navId,
+  });
 
   const setFormData = (newData: Partial<ForgotPwFormData>) => {
     setFormDataState((prev) => ({ ...prev, ...newData }));
@@ -41,9 +48,14 @@ export const ForgotPwProvider = ({ children }: ForgotPwProviderProps) => {
   const nextStep = () => setStep((prev) => prev + 1);
   const prevStep = () => setStep((prev) => prev - 1);
 
+  const resetFlow = () => {
+    setStep(1);
+    setFormDataState({}); // golește toate datele
+  };
+
   return (
     <ForgotPwContext.Provider
-      value={{ step, nextStep, prevStep, formData, setFormData }}
+      value={{ step, nextStep, prevStep, formData, setFormData, resetFlow }}
     >
       {children}
     </ForgotPwContext.Provider>

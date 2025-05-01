@@ -5,15 +5,9 @@ import {
   ReactNode,
   useEffect,
 } from "react";
-import axios from "axios";
+import api from "../api";
+import { AuthUser, UserProfile } from "../contexts/types";
 
-type User = {
-  id: number;
-  first_name: string;
-  last_name: string;
-  username: string;
-  email: string;
-};
 export type SignInCredentials = {
   identifier: string;
   password: string;
@@ -22,7 +16,8 @@ export type SignInCredentials = {
 type AuthContextType = {
   isAuthenticated: boolean;
   token: string | null;
-  user: User | null;
+  user: AuthUser | null;
+  profile: UserProfile | null;
   signIn: (credentials: SignInCredentials) => Promise<void>;
   signOut: () => void;
   loading: boolean;
@@ -31,50 +26,57 @@ type AuthContextType = {
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export const AuthProvider = ({ children }: { children: ReactNode }) => {
-  const [token, setToken] = useState<string | null>(null);
-  const [user, setUser] = useState<User | null>(null);
+  const [token, setToken] = useState<string | null>(() => {
+    return localStorage.getItem("accessToken");
+  });
+  const [user, setUser] = useState<AuthUser | null>(() =>
+    JSON.parse(localStorage.getItem("user") || "null")
+  );
+  const [profile, setProfile] = useState<UserProfile | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const storedToken = localStorage.getItem("token");
-    const storedUser = localStorage.getItem("user");
-    console.log("Stored token:", storedToken);
-    console.log("Stored user:", storedUser);
-    if (storedToken && storedUser) {
-      setToken(storedToken);
-      setUser(JSON.parse(storedUser));
+    if (!token) {
+      setLoading(false);
+      return;
     }
-    setLoading(false);
-  }, []);
-
+    api.defaults.headers.common.Authorization = `Bearer ${token}`;
+    api
+      .get<AuthUser>("accounts/me/")
+      .then((res) => {
+        setUser(res.data);
+        return api.get<UserProfile>("profile/me");
+      })
+      .then((res) => setProfile(res.data))
+      .catch(() => signOut())
+      .finally(() => setLoading(false));
+  }, [token]);
   console.log("Auth state:", { token, user, loading });
 
   const signIn = async ({ identifier, password }: SignInCredentials) => {
     try {
-      const response = await axios.post("http://localhost:8000/api/sign_in/", {
+      const response = await api.post("accounts/sign_in/", {
         identifier,
         password,
       });
-      const data = response.data;
-      setToken(data.token);
-      setUser({
-        id: data.user_id,
-        first_name: data.first_name,
-        last_name: data.last_name,
-        username: data.username,
-        email: data.email,
-      });
-      localStorage.setItem("token", data.token);
-      localStorage.setItem(
-        "user",
-        JSON.stringify({
-          id: data.user_id,
-          first_name: data.first_name,
-          last_name: data.last_name,
-          username: data.username,
-          email: data.email,
-        })
-      );
+      const { access, refresh } = response.data;
+      // salvează doar access+refresh
+      localStorage.setItem("accessToken", access);
+      localStorage.setItem("refreshToken", refresh);
+      console.log(">>> signIn stored:", localStorage.getItem("accessToken"));
+      api.defaults.headers.common.Authorization = `Bearer ${access}`;
+
+      setToken(access);
+
+      // 2️⃣ Obţinerea datelor user
+      const userRes = await api.get<AuthUser>("accounts/me/");
+      setUser(userRes.data);
+      // mută salvarea user fă imediat după ce ai userRes
+      localStorage.setItem("user", JSON.stringify(userRes.data));
+
+      // 3️⃣ Obţinerea profilului
+      const profRes = await api.get<UserProfile>("profile/me/");
+      setProfile(profRes.data);
     } catch (error: any) {
       console.error(
         "Eroare la sign in:",
@@ -87,14 +89,18 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const signOut = () => {
     setToken(null);
     setUser(null);
-    localStorage.removeItem("token");
+    setProfile(null);
     localStorage.removeItem("user");
+    localStorage.removeItem("accessToken");
+    localStorage.removeItem("refreshToken");
+    delete api.defaults.headers.common.Authorization;
   };
 
   const value: AuthContextType = {
     isAuthenticated: !!token,
     token,
     user,
+    profile,
     signIn,
     signOut,
     loading,

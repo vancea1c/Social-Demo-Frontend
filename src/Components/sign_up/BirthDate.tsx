@@ -1,8 +1,9 @@
-import { zodResolver } from "@hookform/resolvers/zod";
-import { useState, useEffect } from "react";
-import { useForm } from "react-hook-form";
+import { useState, useEffect, FocusEvent, ChangeEvent } from "react";
+import { useFormContext } from "react-hook-form";
+import { Step1Data } from "../schemas/signup/step1Schema";
 import { z } from "zod";
 
+// Schema si tipuri pentru campurile datei de nastere
 const today = new Date();
 const min18 = new Date(
   today.getFullYear() - 18,
@@ -10,148 +11,158 @@ const min18 = new Date(
   today.getDate()
 );
 
-const BirthDateSchema = z
+export const BirthDateSchema = z
   .object({
-    year: z.string().nonempty({ message: "Select year." }),
-    month: z.string().nonempty({ message: "Select month." }),
-    day: z.string().nonempty({ message: "Select day." }),
+    year: z.string(),
+    month: z.string(),
+    day: z.string(),
+    touched: z.boolean().optional(),
   })
   .superRefine((val, ctx) => {
-    const { year, month, day } = val;
-    const y = parseInt(year);
-    const m = parseInt(month);
-    const d = parseInt(day);
-
-    const birth_date = new Date(y, m - 1, d);
-    if (birth_date > min18) {
+    const y = parseInt(val.year, 10);
+    const m = parseInt(val.month, 10);
+    const d = parseInt(val.day, 10);
+    if (!val.touched) return; // nu valida daca nu s a interacționat
+    const hasEmpty = !y || !m || !d;
+    const birthDate = new Date(y, m - 1, d);
+    if (birthDate > min18) {
       ctx.addIssue({
         code: z.ZodIssueCode.custom,
         message: "You must be at least 18 years old.",
         path: ["day"],
       });
     }
+    if (hasEmpty) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "Please enter your birth date.",
+        path: ["day"],
+      });
+      return;
+    }
   });
+export type BirthDateForm = z.infer<typeof BirthDateSchema>;
 
-type BirthDateForm = z.infer<typeof BirthDateSchema>;
+const monthNames = [
+  "January",
+  "February",
+  "March",
+  "April",
+  "May",
+  "June",
+  "July",
+  "August",
+  "September",
+  "October",
+  "November",
+  "December",
+];
 
-const BirthDate = () => {
+export const BirthDate = () => {
   const {
     register,
-    handleSubmit,
     watch,
-    formState: { errors, isValid },
-  } = useForm<BirthDateForm>({
-    mode: "onChange",
-    resolver: zodResolver(BirthDateSchema),
-  });
+    setValue,
+    trigger,
+    formState: { errors },
+  } = useFormContext<Step1Data>();
 
-  // urmarim valorile selectate in formular
-  const watchYear = watch("year");
-  const watchMonth = watch("month");
-  //lista de zile in functie de luna si an
-  const [days, setDays] = useState<number[]>([]);
-
-  const monthNames = [
-    "January",
-    "February",
-    "March",
-    "April",
-    "May",
-    "June",
-    "July",
-    "August",
-    "September",
-    "October",
-    "November",
-    "December",
-  ];
-
-  // Funcție pt a obține nr de zile într-o lună dată
-  const getDaysInMonth = (year: number, month: number): number => {
-    // 0 = ultima zi din luna, (28, 29, 30, 31)
-    return new Date(year, month, 0).getDate();
-  };
-
-  // useEffect care se declanșează când an sau lună se schimbă
+  const year = watch("birth_date_fields.year");
+  const month = watch("birth_date_fields.month");
+  // reset ziua și touched când se schimbă year sau month
   useEffect(() => {
-    if (watchYear && watchMonth) {
-      const year = parseInt(watchYear, 10);
-      const month = parseInt(watchMonth, 10);
-      const totalDays = getDaysInMonth(year, month);
-      // Creăm un array cu numerele de la 1 la totalDays
-      const daysArray = Array.from({ length: totalDays }, (_, i) => i + 1);
-      setDays(daysArray);
+    setValue("birth_date_fields.day", "", { shouldValidate: false });
+    setValue("birth_date_fields.touched", false, { shouldValidate: false });
+  }, [year, month, setValue]);
+
+  // construiește array-ul de zile pentru luna selectată
+  const [days, setDays] = useState<number[]>([]);
+  useEffect(() => {
+    const y = parseInt(year, 10);
+    const m = parseInt(month, 10);
+    if (!isNaN(y) && !isNaN(m)) {
+      const total = new Date(y, m, 0).getDate();
+      setDays(Array.from({ length: total }, (_, i) => i + 1));
     } else {
       setDays([]);
     }
-  }, [watchYear, watchMonth]);
+  }, [year, month]);
 
-  const onSubmit = (data: BirthDateForm) => {
-    console.log("Valid data:", data);
+  // când alegi ziua: marchează touched și rulează validarea Zod
+  const handleDayChange = (e: ChangeEvent<HTMLSelectElement>) => {
+    setValue("birth_date_fields.day", e.target.value, {
+      shouldValidate: false,
+    });
+    setValue("birth_date_fields.touched", true, { shouldValidate: false });
+    trigger("birth_date_fields");
   };
 
-  // Generăm lista de ani (ultimii 100 de ani)
-  const currentYear = new Date().getFullYear();
-  const years = Array.from({ length: 100 }, (_, i) =>
-    (currentYear - i).toString()
-  );
-  const months = monthNames.map((name, i) => ({
-    value: (i + 1).toString(),
-    name,
-  }));
+  // la blur-ul întregului grup: marchează touched și validează
+  const handleGroupBlur = (e: FocusEvent<HTMLDivElement>) => {
+    if (e.currentTarget.contains(e.relatedTarget as Node)) return;
+    setValue("birth_date_fields.touched", true, { shouldValidate: false });
+    trigger("birth_date_fields");
+  };
 
   return (
-    <form onSubmit={handleSubmit(onSubmit)}>
-      <div className="birth_date">
+    <div className="birth_date">
+      <div className="header">
         <label>Birth Date:</label>
         <p>
           This will not be shown publicly. Confirm your own age, even if this
           account is for a business, a pet, or something else.
         </p>
+      </div>
+      <div className="group-fields" onBlur={handleGroupBlur} tabIndex={-1}>
         <div className="form-column">
           <label htmlFor="year">Year</label>
-          <select id="year" {...register("year")} autoFocus>
-            <option value=""></option>
-            {years.map((year) => (
-              <option key={year} value={year}>
-                {year}
-              </option>
-            ))}
+          <select id="year" {...register("birth_date_fields.year")}>
+            <option value="" />
+            {Array.from({ length: 100 }, (_, i) => {
+              const y = new Date().getFullYear() - i;
+              return (
+                <option key={y} value={y}>
+                  {y}
+                </option>
+              );
+            })}
           </select>
-          {errors.year && <p className="text-danger">{errors.year.message}</p>}
-        </div>
-        <div className="form-column">
-          <label htmlFor="month">Month</label>
-          <select id="month" {...register("month")} autoFocus>
-            <option value=""></option>
-            {months.map((month, i) => (
-              <option key={month.value} value={month.value}>
-                {month.name}
-              </option>
-            ))}
-          </select>
-          {errors.month && (
-            <p className="text-danger">{errors.month.message}</p>
-          )}
-        </div>
-        <div className="form-column">
-          <label htmlFor="day">Day</label>
-          <select id="day" {...register("day")} autoFocus>
-            <option value=""></option>
-            {days.map((day) => (
-              <option key={day} value={day.toString()}>
-                {day}
-              </option>
-            ))}
-          </select>
-          {errors.day && <p className="text-danger">{errors.day.message}</p>}
         </div>
 
-        <button type="submit" disabled={!isValid}>
-          Next
-        </button>
+        <div className="form-column">
+          <label htmlFor="month">Month</label>
+          <select id="month" {...register("birth_date_fields.month")}>
+            <option value="" />
+            {monthNames.map((name, i) => (
+              <option key={i} value={i + 1}>
+                {name}
+              </option>
+            ))}
+          </select>
+        </div>
+
+        <div className="form-column">
+          <label htmlFor="day">Day</label>
+          <select
+            id="day"
+            {...register("birth_date_fields.day")}
+            onChange={handleDayChange}
+          >
+            <option value="" />
+            {days.map((d) => (
+              <option key={d} value={d}>
+                {d}
+              </option>
+            ))}
+          </select>
+          {errors.birth_date_fields?.day && (
+            <p className="text-danger">
+              {errors.birth_date_fields.day.message}
+            </p>
+          )}
+        </div>
       </div>
-    </form>
+    </div>
   );
 };
 

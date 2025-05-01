@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { birth_date_schema } from "./birthDateSchema";
+import { BirthDateSchema } from "../../sign_up/BirthDate";
 export const step1Schema = z.object({
   first_name: z
     .string()
@@ -21,7 +21,7 @@ export const step1Schema = z.object({
     .refine(
       async (value) => {
         const res = await fetch(
-          `http://localhost:8000/api/check-email/?email=${value}`
+          `/api/accounts/check-email/?email=${value}`
         );
         const data = await res.json();
         return data.available;
@@ -40,7 +40,7 @@ export const step1Schema = z.object({
     .refine(
       async (value) => {
         const res = await fetch(
-          `http://localhost:8000/api/check-username/?username=${value}`
+          `/api/accounts/check-username/?username=${value}`
         );
         const data = await res.json();
         return data.available;
@@ -52,7 +52,7 @@ export const step1Schema = z.object({
     required_error: "Please select your gender.",
     invalid_type_error: "Please select your gender.",
   }),
-  birth_date_fields: birth_date_schema,
+  birth_date_fields: BirthDateSchema,
 });
 
 export type Step1Data = z.infer<typeof step1Schema>;

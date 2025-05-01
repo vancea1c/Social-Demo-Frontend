@@ -6,8 +6,8 @@ const LogOutButton = () => {
   const { signOut } = useAuth();
   const navigate = useNavigate();
   const handleLogOut = () => {
-    signOut;
-    navigate("/");
+    navigate("/", { replace: true });
+    signOut();
   };
   return <button onClick={handleLogOut}>Log Out</button>;
 };
