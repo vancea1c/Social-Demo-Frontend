@@ -3,22 +3,28 @@ import axios from "axios";
 import { useSignUpContext } from "./SignUpContext";
 import PasswordInput from "../Password2";
 import { useState } from "react";
+import { useAuth } from "../AuthContext";
 
 function SignUpStep2() {
+  const { signIn } = useAuth();
   const { prevStep, formData, setFormData } = useSignUpContext();
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
 
   // Submit handler
   const handleSubmit = async () => {
+    setLoading(true);
     // Merge with previous step data
     const completeData = { ...formData };
     console.log("Sending to server:", completeData);
 
     try {
-      setLoading(true);
       const response = await axios.post("/api/accounts/sign_up/", completeData);
       if (response.status === 201) {
+        await signIn({
+          identifier: formData.username,
+          password: formData.password,
+        });
         navigate("/home");
       } else {
         setLoading(false);

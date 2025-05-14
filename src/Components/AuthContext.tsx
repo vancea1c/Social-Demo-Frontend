@@ -16,6 +16,7 @@ export type SignInCredentials = {
 type AuthContextType = {
   isAuthenticated: boolean;
   token: string | null;
+  isReady: boolean;
   user: AuthUser | null;
   profile: UserProfile | null;
   signIn: (credentials: SignInCredentials) => Promise<void>;
@@ -34,10 +35,12 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   );
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [loading, setLoading] = useState(true);
+  const [isReady, setIsReady] = useState(false);
 
   useEffect(() => {
     if (!token) {
       setLoading(false);
+      setIsReady(true);
       return;
     }
     api.defaults.headers.common.Authorization = `Bearer ${token}`;
@@ -49,7 +52,10 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       })
       .then((res) => setProfile(res.data))
       .catch(() => signOut())
-      .finally(() => setLoading(false));
+      .finally(() => {
+        setLoading(false);
+        setIsReady(true);
+      });
   }, [token]);
   console.log("Auth state:", { token, user, loading });
 
@@ -86,7 +92,9 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     }
   };
 
-  const signOut = () => {
+  const signOut = (redirectUrl: string = "/") => {
+    // Full page reload redirect
+    window.location.replace(redirectUrl);
     setToken(null);
     setUser(null);
     setProfile(null);
@@ -95,7 +103,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     localStorage.removeItem("refreshToken");
     delete api.defaults.headers.common.Authorization;
   };
-
   const value: AuthContextType = {
     isAuthenticated: !!token,
     token,
@@ -104,6 +111,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     signIn,
     signOut,
     loading,
+    isReady: !loading,
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

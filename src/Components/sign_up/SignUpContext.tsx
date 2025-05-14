@@ -46,15 +46,21 @@ export const SignUpProvider = ({ children }: SignUpProviderProps) => {
     const saved = localStorage.getItem("signupStep");
     return saved ? parseInt(saved, 10) : 1;
   });
-
-  useEffect(() => {
-    localStorage.setItem("signupStep", String(step));
-  }, [step]);
-
   const [formData, setFormDataState] = useState<SignUpFormData>(() => {
     const saved = localStorage.getItem("signupData");
     return saved ? JSON.parse(saved) : {};
   });
+
+  useEffect(() => {
+    localStorage.removeItem("signupStep");
+    localStorage.removeItem("signupData");
+    setStep(1);
+    setFormDataState({});
+  }, []);
+
+  useEffect(() => {
+    localStorage.setItem("signupStep", String(step));
+  }, [step]);
 
   useEffect(() => {
     localStorage.setItem("signupData", JSON.stringify(formData));

@@ -1,5 +1,5 @@
 import axios from "axios";
-
+import { PostProps } from "./Components/Feed/Post2";
 const api = axios.create({
   baseURL: "http://localhost:8000/api/", // URL-ul backend-ului tău Django+DRF
   withCredentials: true, // să trimită cookie-ul de sesiune
@@ -32,4 +32,20 @@ api.interceptors.response.use(
     return Promise.reject(err);
   }
 );
+// Like / Unlike
+export const likePost = (id: number) =>
+  api.post<PostProps>(`/posts/${id}/like/`);
+export const unlikePost = (id: number) =>
+  api.delete<PostProps>(`/posts/${id}/like/`);
+
+export const repostPost = (id: number) =>
+  api.post<PostProps>(`/posts/${id}/repost/`);
+
+export const quotePost = (parentId: number, text: string) =>
+  api.post<PostProps>("/posts/", {
+    parent: parentId,
+    type: "quote",
+    description: text,
+  });
+
 export default api;
