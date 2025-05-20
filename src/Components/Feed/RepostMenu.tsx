@@ -1,25 +1,25 @@
 // src/Components/Feed/RepostMenu.tsx
-import React, { Fragment, useState } from "react";
+import React, { Fragment } from "react";
 import { Menu, Transition } from "@headlessui/react";
 import { Repeat } from "react-feather"; // retweet icon
 import { PostProps } from "./Post2";
 import { useToggleRepost } from "../useToggleRepost";
-import { usePostSync } from "../usePostSync";
-import { useFeedRefresh } from "../../contexts/FeedRefreshContext";
 interface RepostMenuProps {
   post: PostProps;
   onQuote: () => void;
+  hideIfReply?: boolean;
 }
-const RepostMenu: React.FC<RepostMenuProps> = ({ post, onQuote }) => {
-  const { post: syncedPost } = usePostSync(post);
-  const isChild = post.type === "repost";
-  const id = isChild ? syncedPost.parent! : syncedPost.id;
+const RepostMenu: React.FC<RepostMenuProps> = ({
+  post,
+  onQuote,
+  hideIfReply = false,
+}) => {
+  if (hideIfReply) return null;
   const { reposted, count, toggle } = useToggleRepost(post);
-  const { triggerRefresh } = useFeedRefresh();
+
   const handleToggle = async () => {
     try {
       await toggle();
-      triggerRefresh();
       // nu facem setState local aici
     } catch (err) {
       console.error(err);
@@ -55,7 +55,7 @@ const RepostMenu: React.FC<RepostMenuProps> = ({ post, onQuote }) => {
         absolute right-0 mt-2 w-36
         bg-white divide-y divide-gray-100
         rounded-md shadow-md ring-1 ring-black ring-opacity-5
-        focus:outline-none z-20
+        focus:outline-none z-[900]
       "
         >
           <div className="py-1">

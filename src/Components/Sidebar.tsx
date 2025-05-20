@@ -34,6 +34,7 @@ const Sidebar: React.FC<SidebarProps> = ({ onComposeClick }) => {
           <li key={to}>
             <NavLink
               to={to}
+              end={to === `/${user.username}`}
               className={({ isActive }) =>
                 `flex items-center space-x-2 px-3 py-2 rounded-full hover:bg-gray-800 transition ${
                   isActive ? "font-bold bg-gray-900" : ""

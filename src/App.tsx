@@ -16,6 +16,7 @@ import { PostSyncProvider } from "./contexts/PostSyncContext";
 import ProfilePage from "./Components/ProfilePage";
 
 import "./App.css";
+import PostDetail from "./Components/pages/PostDetail";
 function App() {
   return (
     <>
@@ -40,6 +41,7 @@ function App() {
               >
                 {/* 2a. Your feed still lives at /home */}
                 <Route path="/home" element={<HomePage />} />
+                <Route path="/:username/posts/:id" element={<PostDetail />} />
 
                 {/* 2b. NEW: Catch-all username route at root */}
                 <Route path="/:username" element={<ProfilePage />} />

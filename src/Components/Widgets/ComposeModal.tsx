@@ -1,16 +1,17 @@
 import React, { useEffect, useState } from "react";
 import { X } from "react-feather";
 import PostForm from "../PostForm2";
-import { useFeedRefresh } from "../../contexts/FeedRefreshContext";
 import Post, { PostProps } from "../Feed/Post2";
 import api from "../../api";
 
-interface ComposeModalProps {
+export interface ComposeModalProps {
   mode?: "post" | "quote" | "reply";
   parentId?: number;
   initialText?: string;
   onClose: () => void;
   onSuccess: () => void;
+  onReply?: (updatedParent: PostProps) => void;
+  onQuote?: (counts: { reposts_count: number}) => void;
 }
 
 const ComposeModal: React.FC<ComposeModalProps> = ({
@@ -19,22 +20,19 @@ const ComposeModal: React.FC<ComposeModalProps> = ({
   initialText = "",
   onClose,
   onSuccess,
+  onReply,
+  onQuote,
 }) => {
-  const { triggerRefresh } = useFeedRefresh();
-
-  // Determinăm eticheta butonului și titlul
-  const isQuote = mode === "quote";
-  const isReply = mode === "reply";
   const [parentPost, setParentPost] = useState<PostProps | null>(null);
-  // 1️⃣ când e “quote” + avem parentId, fetching
+
   useEffect(() => {
-    if (isQuote || (isReply && parentId)) {
+    if ((mode === "quote" || mode === "reply") && parentId) {
       api
         .get<PostProps>(`/posts/${parentId}/`)
         .then((res) => setParentPost(res.data))
         .catch(console.error);
     }
-  }, [isQuote, isReply, parentId]);
+  }, [mode, parentId]);
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-white/30">
@@ -44,23 +42,31 @@ const ComposeModal: React.FC<ComposeModalProps> = ({
             <X />
           </button>
         </div>
-        {/* aici e același formular reutilizat */}
         <PostForm
-          onSuccess={() => {
-            triggerRefresh();
-            onClose();
-          }}
-          // aceste props TREBUIE să existe în PostForm2 ca write-only
           parentId={parentId}
           type={mode}
           initialDescription={initialText}
+          onReply={(updated) => {
+            setParentPost(updated);
+            onReply?.(updated);
+          }}
+          onQuote={(counts) => {
+            onQuote?.(counts);
+          }}
+          onSuccess={() => {
+            onClose();
+          }}
         />
         {/* Dacă e quote, arătăm un mic banner */}
-        {isQuote && parentId && (
-          <Post {...(parentPost as PostProps)} hideInteractive></Post>
+        {mode === "quote" && parentId && (
+          <Post
+            {...(parentPost as PostProps)}
+            hideInteractive
+            disableNavigate
+          ></Post>
         )}
         {/* Dacă e reply, similar */}
-        {isReply && parentPost && (
+        {mode === "reply" && parentPost && (
           <div className="mt-4 px-3 py-2 bg-gray-900 rounded">
             <p className="text-gray-400 text-sm mb-2">
               Replying to{" "}

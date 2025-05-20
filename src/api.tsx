@@ -5,6 +5,7 @@ const api = axios.create({
   withCredentials: true, // să trimită cookie-ul de sesiune
 });
 
+type Paginated<T> = { results: T[] };
 // Injector de header pentru fiecare request
 api.interceptors.request.use((cfg) => {
   const token = localStorage.getItem("accessToken");
@@ -15,6 +16,11 @@ api.interceptors.request.use((cfg) => {
 
   return cfg;
 });
+
+export interface ReplyResponse extends PostProps {
+  parent_post: PostProps;
+}
+
 // (opțional) auto-refresh la 401:
 api.interceptors.response.use(
   (res) => res,
@@ -32,20 +38,47 @@ api.interceptors.response.use(
     return Promise.reject(err);
   }
 );
+export const fetchPost = (id: number) => api.get<PostProps>(`/posts/${id}/`);
+
+export const fetchPosts = (params?: { type?: string }) =>
+  api.get<PostProps[] | Paginated<PostProps>>("/posts/", { params });
+
+export const fetchReplies = (id: number) =>
+  api.get<PostProps[]>(`/posts/?type=reply&parent=${id}`);
+
+export const createPost = (description: string, uploads: File[]) => {
+  const form = new FormData();
+  form.append("description", description);
+  uploads.forEach((f) => form.append("uploads", f));
+  return api.post<PostProps>("/posts/", form, {
+    headers: { "Content-Type": "multipart/form-data" },
+  });
+};
+
+export const replyToPost = (postId: number, content: string) =>
+  api.post<ReplyResponse>(`/posts/${postId}/reply/`, { content });
+
+export const quotePost = (
+  postId: number,
+  description: string,
+  uploads: File[] = []
+) => {
+  const form = new FormData();
+  form.append("description", description);
+  // presupunem că pe backend accepţi un câmp numit "uploads"
+  uploads.forEach((f) => form.append("uploads", f));
+  return api.post<PostProps>(`/posts/${postId}/quote/`, form, {
+    headers: { "Content-Type": "multipart/form-data" },
+  });
+};
+
+export const repostPost = (postId: number) =>
+  api.post<PostProps>(`/posts/${postId}/repost/`);
+
 // Like / Unlike
 export const likePost = (id: number) =>
   api.post<PostProps>(`/posts/${id}/like/`);
 export const unlikePost = (id: number) =>
   api.delete<PostProps>(`/posts/${id}/like/`);
-
-export const repostPost = (id: number) =>
-  api.post<PostProps>(`/posts/${id}/repost/`);
-
-export const quotePost = (parentId: number, text: string) =>
-  api.post<PostProps>("/posts/", {
-    parent: parentId,
-    type: "quote",
-    description: text,
-  });
 
 export default api;

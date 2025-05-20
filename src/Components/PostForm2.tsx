@@ -1,10 +1,9 @@
 import React, { useState, FormEvent } from "react";
-import api from "../api";
+import { createPost, replyToPost, quotePost, fetchPost } from "../api";
 import { PostProps } from "./Feed/Post2";
 import useMediaManager from "./useMediaManager";
 import CropModal from "./CropModal";
 import { ArrowLeft, ArrowRight, X } from "react-feather";
-import { usePostSyncContext } from "../contexts/PostSyncContext";
 
 export interface PostFormProps {
   onSuccess?: () => void;
@@ -12,6 +11,8 @@ export interface PostFormProps {
   parentId?: number;
   type?: "post" | "quote" | "reply";
   initialDescription?: string;
+  onReply?: (updateParent: PostProps) => void;
+  onQuote?: (counts: { reposts_count: number }) => void;
 }
 
 const MAX_MEDIA = 4;
@@ -22,6 +23,8 @@ const PostForm: React.FC<PostFormProps> = ({
   parentId,
   type,
   initialDescription,
+  onReply,
+  onQuote,
 }) => {
   // Folosim hook-ul centralizat pentru fișiere & crop
   const {
@@ -47,7 +50,6 @@ const PostForm: React.FC<PostFormProps> = ({
   const [currentIndex, setCurrentIndex] = useState(0);
   const [sliderIndex, setSliderIndex] = useState(0);
   const [showModal, setShowModal] = useState(false);
-  const { updatePost } = usePostSyncContext();
 
   const canSubmit = text.trim().length > 0 || files.length > 0;
 
@@ -79,31 +81,7 @@ const PostForm: React.FC<PostFormProps> = ({
     rollback();
     setShowModal(false);
   };
-  const submitReply = async (parentId: number) => {
-    await api.post(`/posts/${parentId}/comments/`, { content: text });
 
-    try {
-      const { data } = await api.get(`/posts/${parentId}/`);
-      updatePost(parentId, { comments_count: data.comments_count });
-    } catch (err) {
-      console.warn("⚠️ Eroare update comments_count:", err);
-    }
-  };
-  const submitPostOrQuote = async () => {
-    const form = new FormData();
-    form.append("description", text);
-    form.append("type", type ?? "post");
-
-    if (parentId != null) {
-      form.append("parent", String(parentId));
-    }
-
-    files.forEach((f) => form.append("uploads", f));
-
-    await api.post("/posts/", form, {
-      headers: { "Content-Type": "multipart/form-data" },
-    });
-  };
   const handleError = (err: any) => {
     setError(
       err.response?.data?.content ||
@@ -112,7 +90,6 @@ const PostForm: React.FC<PostFormProps> = ({
         "Failed to post."
     );
   };
-  // Trimite postarea
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
     if (!canSubmit) return;
@@ -122,9 +99,17 @@ const PostForm: React.FC<PostFormProps> = ({
 
     try {
       if (type === "reply" && parentId) {
-        await submitReply(parentId);
+        // call our new /posts/{id}/reply/ endpoint
+        const { data } = await replyToPost(parentId, text);
+        onReply?.(data.parent_post);
+      } else if (type === "quote" && parentId) {
+        // call our new /posts/{id}/quote/ endpoint
+        await quotePost(parentId, text, files);
+        const { data: updatedParent } = await fetchPost(parentId);
+        onQuote?.({ reposts_count: updatedParent.reposts_count });
       } else {
-        await submitPostOrQuote();
+        // a brand-new post (no parent)
+        await createPost(text, files);
       }
 
       clearAll();

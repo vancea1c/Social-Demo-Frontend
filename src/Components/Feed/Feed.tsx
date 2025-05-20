@@ -1,54 +1,44 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useMemo } from "react";
 import PostInput from "./PostInput";
-import api from "../../api";
 import Post, { PostProps } from "./Post2";
-import { useFeedRefresh } from "../../contexts/FeedRefreshContext";
 import { usePostSyncContext } from "../../contexts/PostSyncContext";
 
+// Sortare descrescător după dată
+const sortByDate = (a: PostProps, b: PostProps) =>
+  new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
+
+// Elimină duplicate (uneori pot apărea copii cu același id+type din cauza sincronizărilor)
+function deduplicatePosts(posts: PostProps[]) {
+  const map = new Map<string, PostProps>();
+  for (const p of posts) {
+    map.set(`${p.type}-${p.id}`, p);
+  }
+  const arr = Array.from(map.values()).sort(sortByDate);
+  return arr;
+}
+
 const Feed: React.FC = () => {
-  const [posts, setPosts] = useState<PostProps[]>([]);
-  const { refreshKey } = useFeedRefresh();
-  const { setOnNewPost } = usePostSyncContext();
+  const { state } = usePostSyncContext();
 
-  const fetchPosts = async () => {
-    try {
-      const response = await api.get("/posts/");
-      const rawData: PostProps[] = Array.isArray(response.data)
-        ? response.data
-        : response.data.results;
-      // 🔍 DEBUG: log all posts
-      rawData.forEach((post, idx) => {
-        console.log(`📦 Feed data sample [${idx}]:`, post);
-      });
+  const posts = useMemo(
+    () =>
+      deduplicatePosts(
+        Object.values(state.posts).filter(
+          (p) => p.type === "post" || p.type === "repost" || p.type === "quote"
+        )
+      ),
 
-      setPosts(rawData);
-    } catch (err: any) {
-      console.error("🛑 Eroare la fetchPosts:", err.response ?? err);
-    }
-  };
-
-  useEffect(() => {
-    fetchPosts();
-  }, [refreshKey]);
-
-  useEffect(() => {
-    setOnNewPost?.((newPost) => {
-      setPosts((prev) => {
-        const exists = prev.some((p) => p.id === newPost.id);
-        if (exists) return prev; // evităm duplicatul!
-        return [newPost, ...prev];
-      });
-    });
-  }, []);
-
+    [state.posts]
+  );
   return (
     <main>
       <PostInput />
-      {posts
-        .filter((p): p is PostProps => p && typeof p.id === "number")
-        .map((p) => (
-          <Post key={p.id} {...p} />
-        ))}
+      {posts.map((p) =>
+        p && typeof p.id === "number" ? (
+          <Post key={`${p.type}-${p.id}`} {...p} />
+        ) : null
+      )}
+      <div style={{ height: "50vh" }} />
     </main>
   );
 };

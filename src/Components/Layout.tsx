@@ -23,7 +23,7 @@ const Layout: React.FC = () => {
 
       {/* Main (se schimbă cu ceru Outlet) */}
       {/* Coloana mijloc */}
-      <main className="col-span-5 sm:col-span-3 flex justify-center overflow-y-auto">
+      <main className="col-span-5 sm:col-span-3 flex justify-center overflow-y-auto h-screen pb-48">
         <div className="w-full max-w-xl border-x border-gray-700">
           <p>Main</p>
           <Outlet></Outlet>
