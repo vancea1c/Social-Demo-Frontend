@@ -1,60 +1,69 @@
-/* 1) Încarcă tot Tailwind-ul (preflight, base, components, utilities) */
-@import "tailwindcss";
+/* 1) Tailwind v4 engine — brings in Preflight, Utilities, Components, your theme.extend & plugins */
 
-/* 2) Dacă vrei plugin-ul Forms: */
+@import "tailwindcss";
 @plugin "@tailwindcss/forms";
 
-/* 3) Suprascrieri globale pe <body> */
+@config "../tailwind.config.cjs";
+
+/* 2) Global overrides */
 @layer base {
   :root {
     font-family: system-ui, Avenir, Helvetica, Arial, sans-serif;
-    line-height: 1.5;
-    font-weight: 400;
 
     color-scheme: light dark;
     color: rgba(255, 255, 255, 0.87);
-    background-color: #242424;
+    background-color: black;
 
-    font-synthesis: none;
-    text-rendering: optimizeLegibility;
-    -webkit-font-smoothing: antialiased;
-    -moz-osx-font-smoothing: grayscale;
+    --bg-dark: #242424;
+    --fg-light: rgba(255, 255, 255, 0.87);
   }
 
+  a {
+    @apply font-medium text-[#646cff] no-underline;
+  }
+  a:hover {
+    @apply text-[#535bf2];
+  }
 
   body {
-    @apply m-0
-           flex items-center justify-center
-           min-w-[320px]
-           min-h-screen;
+    @apply m-0 flex items-center justify-center
+           min-w-[520px] min-h-screen;
   }
+
   h1 {
-    font-size: 3.2em;
-    line-height: 1.1;
+    @apply text-[3.2em] leading-[1.1];
   }
+
   button {
-    border-radius: 8px;
-    border: 1px solid transparent;
-    padding: 0.6em 1.2em;
-    font-size: 1em;
-    font-weight: 500;
-    font-family: inherit;
-    background-color: #1a1a1a;
-    cursor: pointer;
-    transition: border-color 0.25s;
+    @apply rounded-md border border-transparent
+           px-6 py-2 text-base font-medium
+           bg-[#1a1a1a] cursor-pointer transition-colors;
   }
   button:hover {
-    border-color: #646cff;
+    @apply border-[#646cff];
   }
   button:focus,
   button:focus-visible {
-    outline: 4px auto -webkit-focus-ring-color;
+    @apply outline-none focus:ring-2 focus:ring-blue-500;
   }
-  
+
+  @media (prefers-color-scheme: light) {
+    :root {
+      color: #213547;
+      background-color: #ffffff;
+    }
+    a:hover {
+      @apply text-[#747bff];
+    }
+    button {
+      @apply bg-[#f9f9f9];
+    }
+  }
 }
 
-/* 4) Stiluri pentru componentele tale */
+/* 3) Component classes & Forms */
 @layer components {
+  /* Tailwind Forms plugin styles */
   input,
   select,
   textarea {
@@ -62,7 +71,74 @@
            bg-[#242424]/60 text-white
            border border-slate-600
            placeholder:text-slate-400
-           focus:outline-none focus:border-blue-500
-           focus:ring-2 focus:ring-blue-500;
+           focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500;
+  }
+
+  .app-container {
+    @apply flex items-center justify-center
+           min-w-[320px] min-h-screen
+           bg-[var(--bg-dark)] text-[var(--fg-light)]
+           font-sans antialiased;
+  }
+
+  .name-text {
+    @apply text-[80px] font-semibold text-transparent
+                       bg-clip-text bg-gradient-to-r from-red-600 to-cyan-400;
+  }
+  .moto-text {
+    @apply text-[35px] font-normal mt-2;
+  }
+
+
+  .btn-base {
+    @apply rounded-md border-transparent px-4 py-2
+           text-base font-medium bg-[#1a1a1a]
+           cursor-pointer transition-colors;
+  }
+  .btn-base:hover {
+    @apply border-[#646cff];
+  }
+
+  .skip-button {
+    @apply absolute top-4 right-4 px-4 py-2
+           bg-gray-200 text-black font-bold
+           rounded shadow-lg
+           hover:shadow-cyan-500/50 hover:shadow-red-500/50;
+  }
+  .skipped-text {
+    @apply block p-0 leading-normal;
+  }
+
+  .logo {
+    @apply h-[6em] p-[1.5em] transition;
+  }
+  .logo:hover {
+    @apply drop-shadow-[0_0_2em_#646cffaa];
+  }
+  .logo.react:hover {
+    @apply drop-shadow-[0_0_2em_#61dafbaa];
+  }
+
+  .card {
+    @apply p-8;
+  }
+  .read-the-docs {
+    @apply text-[#888];
+  }
+}
+
+/* 4) Any additional utilities (e.g. blink keyframes) */
+@layer utilities {
+  @keyframes blink {
+    0%,
+    100% {
+      opacity: 1;
+    }
+    50% {
+      opacity: 0;
+    }
+  }
+  .animate-blink {
+    animation: blink 1s infinite;
   }
 }

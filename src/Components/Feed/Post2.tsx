@@ -130,6 +130,7 @@ const Post: React.FC<PostProps> = (initialProps) => {
   const wrapperProps = disableNavigate
     ? {}
     : { to: `/${username}/posts/${id}` };
+
   // 5) ramura repost
   if (type === "repost" && parentData) {
     const isMe = user.username === username;

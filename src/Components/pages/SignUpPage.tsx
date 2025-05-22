@@ -1,12 +1,24 @@
+import TextPressure from "../Animations/TextPressure";
 import { SignUpProvider } from "../sign_up/SignUpContext";
 import SignUpForm from "../sign_up/SignUpForm";
 
 const SignUpPage = () => {
   return (
-    <div className="signup-page">
-      <div className="signup-box">
-        <div className="header">
-          <h1 className="">Social</h1>
+    <div className="signup-page font-jura min-h-screen bg-black flex items-center justify-center px-4">
+      <div className="signup-box w-full max-w-md bg-[#0E0E0E] bg-opacity-50 backdrop-blur-lg p-8 rounded-2xl shadow-lg">
+        <div className="header w-fit">
+          <TextPressure
+            text="SOCIAL"
+            flex={true}
+            alpha={false}
+            stroke={false}
+            width={true}
+            weight={true}
+            italic={true}
+            textColor="#ffffff"
+            strokeColor="#ff0000"
+            minFontSize={36}
+          />
         </div>
         <SignUpProvider>
           <SignUpForm />

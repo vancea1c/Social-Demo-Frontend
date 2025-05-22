@@ -1,0 +1,15 @@
+@import "tailwindcss";
+@import "./tailwind.css";
+@config "../tailwind.config.cjs";
+
+@layer components {
+  .cursor1 {
+    @apply text-[52px] pb-[13px] pl-[5px];
+  }
+  .cursor2 {
+    @apply text-[87px] pb-[4px] pl-[5px];
+  }
+  .cursor3 {
+    @apply text-[34px] pb-[1.5px];
+  }
+}

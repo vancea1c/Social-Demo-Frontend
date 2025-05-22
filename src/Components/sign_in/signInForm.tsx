@@ -99,7 +99,7 @@ const SignInForm = () => {
           </form>
         </div>
         <div className="footer">
-          <button type="submit" form="signin-form">
+          <button type="submit" form="signin-form" className="btn-base">
             {loading ? "Login in.." : "Log in"}
           </button>
           {showForgot && (

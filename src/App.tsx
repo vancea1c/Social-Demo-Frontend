@@ -15,7 +15,6 @@ import { FeedRefreshProvider } from "./contexts/FeedRefreshContext";
 import { PostSyncProvider } from "./contexts/PostSyncContext";
 import ProfilePage from "./Components/ProfilePage";
 
-import "./App.css";
 import PostDetail from "./Components/pages/PostDetail";
 function App() {
   return (
