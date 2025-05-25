@@ -12,52 +12,41 @@ export interface CropState {
   crop: { x: number; y: number };
   zoom: number;
   aspect: number;
-  area?: Area;
+  area?: Area | null;
 }
 
 export default function useMediaManager({
   maxFiles = 4,
   maxVideoSizeBytes = 256 * 1024 * 1024,
 }: MediaManagerOptions = {}) {
-  // Lista de fișiere efective (posibil cropate)
   const [files, setFiles] = useState<File[]>([]);
-  // Previews pentru fișiere (pentru afișare)
   const [previews, setPreviews] = useState<string[]>([]);
-
-  // Originale încărcate inițial, folosite ca sursă pentru crop
   const [originalPreviews, setOriginalPreviews] = useState<string[]>([]);
-  // Aspect ratio al imaginilor originale
   const [aspects, setAspects] = useState<number[]>([]);
-
-  // Stările de crop per imagine (working state)
   const [cropStates, setCropStates] = useState<(CropState | undefined)[]>([]);
-  // Backup state pentru undo
   const backupCropStates = useRef<(CropState | undefined)[]>([]);
 
-  // Când se adaugă fișiere noi: setăm originals + aspects, iar previews se calculează din files
+  // Add new files
   const addFiles = useCallback(
     (selected: File[]) => {
-      // Filtrare video mari
       const valid = selected.filter(
         (f) => !(f.type.startsWith("video/") && f.size > maxVideoSizeBytes)
       );
       if (!valid.length) return;
 
-      // Creăm URL-uri pentru originals și calculăm aspect
+      // generate object URLs for originals
       const newOriginalUrls = valid.map((f) => URL.createObjectURL(f));
       setOriginalPreviews((prev) =>
         [...prev, ...newOriginalUrls].slice(0, maxFiles)
       );
-      // Calcule aspect ratio
+      // compute aspects
       Promise.all(newOriginalUrls.map(getImageAspect))
         .then((newAspects) => {
           setAspects((prev) => [...prev, ...newAspects].slice(0, maxFiles));
         })
-        .catch(() => {
-          /* ignorăm erorile */
-        });
+        .catch(() => {});
 
-      // Actualizăm files și resetăm cropStates pentru noile intrări
+      // update files & reset crop states
       setFiles((prev) => {
         const next = [...prev, ...valid].slice(0, maxFiles);
         setCropStates((cs) =>
@@ -69,14 +58,13 @@ export default function useMediaManager({
     [maxFiles, maxVideoSizeBytes]
   );
 
-  // Când files se schimbă: regenerează previews și revocă URL-urile vechi
+  // rebuild previews whenever files change
   useEffect(() => {
     previews.forEach(URL.revokeObjectURL);
     const newPreviews = files.map((f) => URL.createObjectURL(f));
     setPreviews(newPreviews);
   }, [files]);
 
-  // Cleanup URL-uri la demontare
   useEffect(() => {
     return () => {
       previews.forEach(URL.revokeObjectURL);
@@ -90,7 +78,6 @@ export default function useMediaManager({
       next[idx] = file;
       return next;
     });
-    // previews vor fi regenerate de useEffect
   }, []);
 
   const removeFile = useCallback((idx: number) => {
@@ -120,15 +107,14 @@ export default function useMediaManager({
   // Crop modal lifecycle
   const openCrop = useCallback(
     (idx: number) => {
-      // Salvăm snapshot-ul curent pentru undo
       backupCropStates.current = cropStates.slice();
     },
     [cropStates]
   );
 
   const saveCrop = useCallback((idx: number, state: CropState) => {
-    setCropStates((prev) => {
-      const next = [...prev];
+    setCropStates((cs) => {
+      const next = [...cs];
       next[idx] = state;
       return next;
     });
@@ -138,29 +124,23 @@ export default function useMediaManager({
     setCropStates(backupCropStates.current);
   }, []);
 
+  // our new doCrop takes the exact CropState you want it to save
   const doCrop = useCallback(
-    async (idx: number, area: Area) => {
-      // Folosim imaginea originală pentru decupare
+    async (idx: number, area: Area, cs: CropState) => {
       const src = originalPreviews[idx];
       const blob = await getCroppedImg(src, area);
       const file = new File([blob], `cropped-${idx}.jpg`, { type: blob.type });
       replaceFile(idx, file);
-      // actualizăm preview-ul imediat
       setPreviews((prev) => {
         URL.revokeObjectURL(prev[idx]);
         const next = [...prev];
         next[idx] = URL.createObjectURL(blob);
         return next;
       });
-      // salvăm noul state de crop
-      saveCrop(idx, {
-        crop: cropStates[idx]?.crop ?? { x: 0, y: 0 },
-        zoom: cropStates[idx]?.zoom ?? 1,
-        aspect: cropStates[idx]?.aspect ?? aspects[idx],
-        area,
-      });
+      // *persist exactly* the CS you passed in
+      saveCrop(idx, { ...cs, area });
     },
-    [originalPreviews, replaceFile, saveCrop, cropStates, aspects]
+    [originalPreviews, replaceFile, saveCrop]
   );
 
   return {

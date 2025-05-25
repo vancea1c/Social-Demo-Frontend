@@ -132,8 +132,6 @@ export const FallingContainer: React.FC<FallingContainerProps> = ({
       wallOpts
     );
     World.add(engine.world, [floor, left, right, ceiling]);
-    const sx = spawnPoint?.x ?? bounds.width / 2;
-    const sy = spawnPoint?.y ?? -50;
     // create bodies for each item
     const bodies: Array<{
       el: HTMLDivElement;
@@ -176,7 +174,7 @@ export const FallingContainer: React.FC<FallingContainerProps> = ({
 
     // sync loop
     (function update() {
-      bodies.forEach(({ el, body, hw, hh }, i) => {
+      bodies.forEach(({ el, body, hw, hh }) => {
         el.style.transform = `
         translate(${body.position.x - hw}px, ${body.position.y - hh}px)
         rotate(${body.angle}rad)

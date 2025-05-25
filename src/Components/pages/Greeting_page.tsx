@@ -2,12 +2,10 @@ import { FallingItem, FallingContainer } from "../Animations/FallingContainer";
 import TypingAnimation from "../Animations/TypeAnimation";
 import { useState } from "react";
 
-
 const Greeting_page = () => {
   const [physicsNodes, setPhysicsNodes] = useState<React.ReactNode[] | null>(
     null
   );
-  
 
   // Define one spawn point per node:
   const x = window.innerWidth / 2;

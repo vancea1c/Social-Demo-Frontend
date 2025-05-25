@@ -66,14 +66,15 @@ const CropModal: React.FC<CropModalProps> = ({
           <h2 className="text-white text-lg font-medium">{title}</h2>
           <button
             disabled={!area}
-            onClick={() =>
+            onClick={() => {
+              onSaveState?.({ crop, zoom, aspect, area });
               onApply({
                 crop,
                 zoom,
                 aspect,
                 area: area!,
-              })
-            }
+              });
+            }}
             className="px-4 py-1 bg-blue-600 rounded disabled:opacity-50 text-white"
           >
             {applyLabel}

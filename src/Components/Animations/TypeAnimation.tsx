@@ -117,9 +117,10 @@ const TypingAnimation: React.FC<TypingAnimationProps> = ({
             pt-2.5 px-5 pb-2.5 mx-3 my-0
             cursor-pointer rounded-md border border-[#999]
             bg-[#DDDDDD] shadow-fancy
-            transition-shadow duration-300 ease-linear
-            hover:animate-move-colors"
-        onClick={() => navigate("/log_in")}
+            transition-all
+            duration-300 ease-linear
+            hover:animate-move-colors hover:scale-110 active:scale-95"
+        onDoubleClick={() => navigate("/log_in")}
       >
         Log in
       </button>,
@@ -130,9 +131,10 @@ const TypingAnimation: React.FC<TypingAnimationProps> = ({
             pt-2.5 px-5 pb-2.5 mx-3 my-0
             cursor-pointer rounded-md border border-[#999]
             bg-[#DDDDDD] shadow-fancy
-            transition-shadow duration-300 ease-linear
-            hover:animate-move-colors"
-        onClick={() => navigate("/sign_up")}
+            transition-all
+            duration-300 ease-linear
+            hover:animate-move-colors hover:scale-110 active:scale-95"
+        onDoubleClick={() => navigate("/sign_up")}
       >
         Sign up
       </button>,
@@ -230,8 +232,9 @@ const TypingAnimation: React.FC<TypingAnimationProps> = ({
             pt-2.5 px-5 pb-2.5 mx-3 my-0
             cursor-pointer rounded-md border border-[#999]
             bg-[#DDDDDD] shadow-fancy
-            transition-shadow duration-300 ease-linear
-            hover:animate-move-colors"
+            transition-all
+            duration-300 ease-linear
+            hover:animate-move-colors hover:scale-110 active:scale-95"
           >
             Skip
           </button>
@@ -245,8 +248,9 @@ const TypingAnimation: React.FC<TypingAnimationProps> = ({
             pt-2.5 px-5 pb-2.5 mx-3 my-0
             cursor-pointer rounded-md border border-[#999]
             bg-[#DDDDDD] shadow-fancy
-            transition-shadow duration-300 ease-linear
-            hover:animate-move-colors"
+            transition-all
+            duration-300 ease-linear
+            hover:animate-move-colors hover:scale-110 active:scale-95"
               onClick={falling}
             >
               Log in
@@ -257,8 +261,9 @@ const TypingAnimation: React.FC<TypingAnimationProps> = ({
             pt-2.5 px-5 pb-2.5 mx-3 my-0
             cursor-pointer rounded-md border border-[#999]
             bg-[#DDDDDD] shadow-fancy
-            transition-shadow duration-300 ease-linear
-            hover:animate-move-colors"
+            transition-all
+            duration-300 ease-linear
+            hover:animate-move-colors hover:scale-110 active:scale-95"
               onClick={falling}
             >
               Sign up
@@ -270,8 +275,9 @@ const TypingAnimation: React.FC<TypingAnimationProps> = ({
             pt-2.5 px-5 pb-2.5 mx-3 my-0
             cursor-pointer rounded-md border border-[#999]
             bg-[#DDDDDD] shadow-fancy
-            transition-shadow duration-300 ease-linear
-            hover:animate-move-colors
+            transition-all
+            duration-300 ease-linear
+            hover:animate-move-colors hover:scale-110 active:scale-95
             "
             >
               ???

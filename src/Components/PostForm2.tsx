@@ -63,14 +63,15 @@ const PostForm: React.FC<PostFormProps> = ({
   // Șterge fișier la click
   const handleRemove = (i: number) => {
     removeFile(i);
-    setCurrentIndex((idx) => Math.max(0, Math.min(idx, previews.length - 2)));
-    setSliderIndex((idx) => Math.max(0, Math.min(idx, previews.length - 2)));
+    setCurrentIndex((ci) => Math.max(0, Math.min(ci, previews.length - 2)));
+    setSliderIndex((si) => Math.max(0, Math.min(si, previews.length - 2)));
   };
 
   // Deschide modal și backup crop state
   const openModal = (i: number) => {
     openCrop(i);
     setCurrentIndex(i);
+    setSliderIndex(i);
     setShowModal(true);
   };
 
@@ -282,40 +283,36 @@ const PostForm: React.FC<PostFormProps> = ({
           }
           initialCrop={cropStates[currentIndex]?.crop}
           initialZoom={cropStates[currentIndex]?.zoom}
-          onSaveState={(state) => {
-            // salvează coordonate + zoom + aspect + area în cropStates[currentIndex]
-            saveCrop(currentIndex, {
-              crop: state.crop,
-              zoom: state.zoom,
-              aspect: state.aspect,
-              area: state.area ?? undefined,
-            });
-          }}
+          onSaveState={(state) => saveCrop(currentIndex, state)}
           onCancel={handleCancel}
           onApply={async (state) => {
-            // Salvezi întâi starea ultimei poze editate (cea curentă)
+            // persist this image's state first
             saveCrop(currentIndex, state);
-
-            // Aplici crop-ul pe TOATE imaginile care au crop definit:
+            // then crop every image that has a state
             for (let i = 0; i < cropStates.length; i++) {
               const cs = i === currentIndex ? state : cropStates[i];
               if (cs?.area) {
-                await doCrop(i, cs.area);
+                await doCrop(i, cs.area, cs);
               }
             }
 
             setShowModal(false);
           }}
-          // --- Avansare/înapoi în carousel:
           canPrev={currentIndex > 0}
           canNext={currentIndex < previews.length - 1}
           onPrev={() => {
-            setCurrentIndex(currentIndex - 1);
-            openCrop(currentIndex - 1);
+            openCrop(currentIndex);
+            const ni = currentIndex - 1;
+            setCurrentIndex(ni);
+            setSliderIndex(Math.floor(ni / 2));
           }}
           onNext={() => {
-            setCurrentIndex(currentIndex + 1);
-            openCrop(currentIndex + 1);
+            openCrop(currentIndex);
+            const ni = currentIndex + 1;
+            setCurrentIndex(ni);
+            if (currentIndex > previews.length - 2)
+              setSliderIndex(Math.floor(ni / 2));
+            else setSliderIndex(currentIndex);
           }}
           applyLabel="Save"
         />
