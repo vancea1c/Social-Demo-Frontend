@@ -38,25 +38,56 @@ api.interceptors.response.use(
     return Promise.reject(err);
   }
 );
-export const fetchPost = (id: number) => api.get<PostProps>(`/posts/${id}/`);
+export const fetchPost = (id: number) => {
+  console.log(`[API] fetchPost id=${id}`);
+  return api.get<PostProps>(`/posts/${id}/`).then((res) => {
+    console.log(`[API] fetchPost RESULT id=${id}:`, res.data);
+    return res;
+  });
+};
 
-export const fetchPosts = (params?: { type?: string }) =>
-  api.get<PostProps[] | Paginated<PostProps>>("/posts/", { params });
+export const fetchPosts = (params?: { type?: string }) => {
+  console.log(`[API] fetchPosts`, params);
+  return api
+    .get<PostProps[] | Paginated<PostProps>>("/posts/", { params })
+    .then((res) => {
+      console.log(`[API] fetchPosts RESULT:`, res.data);
+      return res;
+    });
+};
+export const fetchUserPosts = (username: string, page: number = 1) => {
+  return api
+    .get<Paginated<PostProps>>(`/posts/?author__username=${username}&page=${page}`)
+    .then((res) => res.data); // return only the data, not the full AxiosResponse
+};
 
 export const fetchReplies = (id: number) =>
   api.get<PostProps[]>(`/posts/?type=reply&parent=${id}`);
 
 export const createPost = (description: string, uploads: File[]) => {
+  console.log(`[API] createPost`, { description, uploads });
   const form = new FormData();
   form.append("description", description);
   uploads.forEach((f) => form.append("uploads", f));
-  return api.post<PostProps>("/posts/", form, {
-    headers: { "Content-Type": "multipart/form-data" },
-  });
+  return api
+    .post<PostProps>("/posts/", form, {
+      headers: { "Content-Type": "multipart/form-data" },
+    })
+    .then((res) => {
+      console.log("[API] createPost RESULT:", res.data);
+      return res;
+    });
 };
 
-export const replyToPost = (postId: number, content: string) =>
-  api.post<ReplyResponse>(`/posts/${postId}/reply/`, { content });
+export const replyToPost = (postId: number, content: string) => {
+  console.log(`[API] replyToPost postId=${postId}, content="${content}"`);
+  return api
+    .post<ReplyResponse>(`/posts/${postId}/reply/`, { content })
+    .then((res) => {
+      console.log(`[API] replyToPost RESULT postId=${postId}:`, res.data);
+      return res;
+    });
+};
 
 export const quotePost = (
   postId: number,
@@ -72,13 +103,28 @@ export const quotePost = (
   });
 };
 
-export const repostPost = (postId: number) =>
-  api.post<PostProps>(`/posts/${postId}/repost/`);
+export const repostPost = (postId: number) => {
+  console.log(`[API] repostPost postId=${postId}`);
+  return api.post<PostProps>(`/posts/${postId}/repost/`).then((res) => {
+    console.log(`[API] repostPost RESULT postId=${postId}:`, res.data);
+    return res;
+  });
+};
 
 // Like / Unlike
-export const likePost = (id: number) =>
-  api.post<PostProps>(`/posts/${id}/like/`);
-export const unlikePost = (id: number) =>
-  api.delete<PostProps>(`/posts/${id}/like/`);
+export const likePost = (id: number) => {
+  console.log(`[API] likePost id=${id}`);
+  return api.post<PostProps>(`/posts/${id}/like/`).then((res) => {
+    console.log(`[API] likePost RESULT id=${id}:`, res.data);
+    return res;
+  });
+};
+export const unlikePost = (id: number) => {
+  console.log(`[API] unlikePost id=${id}`);
+  return api.delete<PostProps>(`/posts/${id}/like/`).then((res) => {
+    console.log(`[API] unlikePost RESULT id=${id}:`, res.data);
+    return res;
+  });
+};
 
 export default api;

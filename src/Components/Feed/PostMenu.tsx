@@ -9,6 +9,7 @@ import {
 import { MoreHorizontal } from "react-feather";
 interface PostMenuProps {
   isMe: boolean;
+  type: string;
   onDelete: () => void;
   onAddFriend: () => void;
   onBlock: () => void;
@@ -16,6 +17,7 @@ interface PostMenuProps {
 
 const PostMenu: React.FC<PostMenuProps> = ({
   isMe,
+  type,
   onDelete,
   onAddFriend,
   onBlock,
@@ -55,7 +57,7 @@ const PostMenu: React.FC<PostMenuProps> = ({
                       active ? "bg-red-100 dark:bg-red-800" : ""
                     } text-red-600 dark:text-red-300 group flex rounded-md items-center w-full px-4 py-2 text-sm`}
                   >
-                    Delete Post
+                    {type === "reply" ? "Delete Comment" : "Delete Post"}
                   </button>
                 )}
               </MenuItem>

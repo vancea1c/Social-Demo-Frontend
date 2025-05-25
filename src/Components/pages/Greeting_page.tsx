@@ -1,10 +1,13 @@
 import { FallingItem, FallingContainer } from "../Animations/FallingContainer";
 import TypingAnimation from "../Animations/TypeAnimation";
-import { useRef, useState } from "react";
+import { useState } from "react";
+
+
 const Greeting_page = () => {
   const [physicsNodes, setPhysicsNodes] = useState<React.ReactNode[] | null>(
     null
   );
+  
 
   // Define one spawn point per node:
   const x = window.innerWidth / 2;
@@ -17,22 +20,6 @@ const Greeting_page = () => {
   ];
   return (
     <div className="w-screen h-screen flex justify-center items-center">
-      {/* <div className="header">
-        <h1>Greeting_page</h1>
-      </div>
-
-      <div className="body">
-        <button>Skip Animation</button>
-      </div>
-
-      <div className="footer">
-        <button className="btn" onClick={() => navigate("/log_in")}>
-          Log in
-        </button>
-        <button className="btn" onClick={() => navigate("/sign_up")}>
-          Sign up
-        </button>
-      </div> */}
       {!physicsNodes && <TypingAnimation onReadyForPhysics={setPhysicsNodes} />}
       {physicsNodes && (
         <FallingContainer
@@ -40,7 +27,6 @@ const Greeting_page = () => {
           spawnPoint={{ x: x, y: y }}
           className="w-full h-full "
         >
-          {/* wrap each node in a FallingItem */}
           {physicsNodes.map((node, i) => (
             <FallingItem
               key={i}

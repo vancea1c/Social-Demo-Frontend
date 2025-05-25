@@ -7,7 +7,6 @@ import { ArrowLeft, ArrowRight, X } from "react-feather";
 
 export interface PostFormProps {
   onSuccess?: () => void;
-  initialType?: PostProps["type"];
   parentId?: number;
   type?: "post" | "quote" | "reply";
   initialDescription?: string;
@@ -19,7 +18,6 @@ const MAX_MEDIA = 4;
 
 const PostForm: React.FC<PostFormProps> = ({
   onSuccess,
-  initialType,
   parentId,
   type,
   initialDescription,

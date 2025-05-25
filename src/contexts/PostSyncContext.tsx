@@ -8,7 +8,7 @@ import React, {
 } from "react";
 import type { PostProps } from "../Components/Feed/Post2";
 import { useAuth } from "../Components/AuthContext";
-import { fetchPosts } from "../api";
+import { fetchPost, fetchPosts } from "../api";
 
 type ContextPostProps = PostProps & {
   parent_post?: PostProps;
@@ -30,10 +30,11 @@ type Action =
 
 function reducer(state: State, action: Action): State {
   let newState: State = state;
-
+  console.log("[PostSync Reducer] Action:", action);
   switch (action.type) {
     case "INIT": {
       newState = action.payload;
+      console.log(`[PostSync Reducer] After ${action.type}:`, newState);
       break;
     }
 
@@ -41,46 +42,56 @@ function reducer(state: State, action: Action): State {
       const post = action.post;
       const posts = { ...state.posts, [post.id]: post };
       const links = { ...state.links };
+      console.log(
+        "[Reducer REGISTER] id:",
+        post.id,
+        "type:",
+        post.type,
+        "parent:",
+        post.parent,
+        "post:",
+        post
+      );
 
-      // dacă e repost, legăm copy-ul la parent
-      if (post.type === "repost" && post.parent != null) {
-        const parentId = post.parent;
-        const arr = links[parentId] || [];
+      if (post.parent !== null && post.parent !== undefined) {
+        const arr = links[post.parent] || [];
         if (!arr.includes(post.id)) {
-          links[parentId] = [...arr, post.id];
+          links[post.parent] = [...arr, post.id];
         }
       }
-
       newState = { posts, links };
+      console.log(`[PostSync Reducer] After ${action.type}:`, newState);
       break;
     }
 
     case "UPDATE": {
       if (!action.data) {
         newState = state;
+        console.log(`[PostSync Reducer] After ${action.type}:`, newState);
         break;
       }
       const existing = state.posts[action.id];
       if (!existing) {
         newState = state;
+        console.log(`[PostSync Reducer] After ${action.type}:`, newState);
         break;
       }
-
+      const SKIP_SYNC_KEYS = ["id", "type", "parent", "created_at"];
       // filtrăm undefined și excludem id-ul ca să nu-l propagăm copiilor
       const filtered = Object.fromEntries(
         Object.entries(action.data).filter(
-          ([key, value]) => value !== undefined && key !== "id"
+          ([key, value]) => value !== undefined && !SKIP_SYNC_KEYS.includes(key)
         )
       );
 
       // actualizăm părinte cu toate câmpurile primite
-      const mergedParent: PostProps = { ...existing, ...filtered };
+      const mergedParent = { ...existing, ...filtered };
       const posts = { ...state.posts, [action.id]: mergedParent };
 
       // propagăm câmpurile și nested parent_post către repost-uri
       for (const childId of state.links[action.id] || []) {
         const child = posts[childId];
-        if (child) {
+        if (child && child.type === "repost") {
           posts[childId] = {
             ...child,
             ...filtered,
@@ -90,6 +101,8 @@ function reducer(state: State, action: Action): State {
       }
 
       newState = { ...state, posts };
+      console.log(`[PostSync Reducer] After ${action.type}:`, newState);
+
       break;
     }
 
@@ -113,15 +126,14 @@ function reducer(state: State, action: Action): State {
       for (const key of Object.keys(links)) {
         links[+key] = links[+key].filter((cid) => cid !== action.id);
       }
-
       newState = { posts, links };
+      console.log(`[PostSync Reducer] After ${action.type}:`, newState);
       break;
     }
 
     default:
       newState = state;
   }
-
   return newState;
 }
 
@@ -130,10 +142,20 @@ const PostSyncContext = createContext<{
   registerPost: (post: PostProps) => void;
   updatePost: (id: number, data: Partial<PostProps>) => void;
   setOnNewPost?: (fn: (post: PostProps) => void) => void;
+  replaceWithFeed: (posts: PostProps[], links: LinkMap) => void;
+  replaceWithPostDetail: (data: {
+    post: PostProps;
+    replies: PostProps[];
+    links: LinkMap;
+  }) => void;
+  replaceWithProfile: (posts: PostProps[], links: LinkMap) => void;
 }>({
   state: { posts: {}, links: {} },
   registerPost: () => {},
   updatePost: () => {},
+  replaceWithFeed: () => {},
+  replaceWithPostDetail: () => {},
+  replaceWithProfile: () => {},
 });
 
 export const usePostSyncContext = () => useContext(PostSyncContext);
@@ -190,6 +212,17 @@ export const PostSyncProvider: React.FC<React.PropsWithChildren> = ({
 
         switch (type) {
           case "post_create":
+            if (
+              (data.type === "repost" ||
+                data.type === "quote" ||
+                data.type === "reply") &&
+              data.parent &&
+              !(state.posts && state.posts[data.parent])
+            ) {
+              fetchPost(data.parent).then((res) => {
+                dispatch({ type: "REGISTER", post: res.data });
+              });
+            }
             dispatch({ type: "REGISTER", post: data });
             onNewPostRef.current?.(data);
             break;
@@ -232,9 +265,54 @@ export const PostSyncProvider: React.FC<React.PropsWithChildren> = ({
   const updatePost = (id: number, data: Partial<PostProps>) =>
     dispatch({ type: "UPDATE", id, data });
 
+  const replaceWithFeed = useCallback((posts: PostProps[], links: LinkMap) => {
+    const postMap: Record<number, PostProps> = {};
+    posts.forEach((p) => {
+      postMap[p.id] = p;
+    });
+    dispatch({ type: "INIT", payload: { posts: postMap, links } });
+  }, []);
+  
+  const replaceWithPostDetail = useCallback(
+    ({
+      post,
+      replies,
+      links,
+    }: {
+      post: PostProps;
+      replies: PostProps[];
+      links: LinkMap;
+    }) => {
+      const postMap: Record<number, PostProps> = { [post.id]: post };
+      replies.forEach((r) => {
+        postMap[r.id] = r;
+      });
+      dispatch({ type: "INIT", payload: { posts: postMap, links } });
+    },
+    []
+  );
+  const replaceWithProfile = useCallback(
+    (posts: PostProps[], links: LinkMap) => {
+      const postMap: Record<number, PostProps> = {};
+      posts.forEach((p) => {
+        postMap[p.id] = p;
+      });
+      dispatch({ type: "INIT", payload: { posts: postMap, links } });
+    },
+    []
+  );
+
   return (
     <PostSyncContext.Provider
-      value={{ state, registerPost, updatePost, setOnNewPost }}
+      value={{
+        state,
+        registerPost,
+        updatePost,
+        setOnNewPost,
+        replaceWithFeed,
+        replaceWithPostDetail,
+        replaceWithProfile,
+      }}
     >
       {children}
     </PostSyncContext.Provider>

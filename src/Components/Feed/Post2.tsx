@@ -5,7 +5,7 @@ import { usePostSync } from "../usePostSync";
 import RepostMenu from "./RepostMenu";
 import ComposeModal from "../Widgets/ComposeModal";
 import { useToggleLike } from "../useToggleLike";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "../AuthContext";
 import PostMenu from "./PostMenu";
 import ConfirmDialog from "./ConfirmDialog";
@@ -38,8 +38,9 @@ export interface PostProps {
 
 const Post: React.FC<PostProps> = (initialProps) => {
   const { post, setPost } = usePostSync(initialProps);
-  const { state: syncState, registerPost, updatePost } = usePostSyncContext();
+  const { state: syncState, registerPost } = usePostSyncContext();
   const { user } = useAuth();
+  const navigate = useNavigate();
   if (!user) {
     return <div>Loading…</div>;
   }
@@ -54,16 +55,15 @@ const Post: React.FC<PostProps> = (initialProps) => {
     description,
     posted_media,
     comments_count,
-    reposts_count,
-    likes_count,
-    liked_by_user,
-    reposted_by_user,
     hideInteractive = false,
     disableNavigate = false,
   } = post;
   useEffect(() => {
     if ((type === "repost" || type === "quote") && parent != null) {
       if (!syncState.posts[parent]) {
+        console.log(
+          `[Post Component] Fetching parent post id=${parent} for repost/quote id=${id}`
+        );
         fetchPost(parent)
           .then((res) => registerPost(res.data))
           .catch(console.error);
@@ -72,41 +72,39 @@ const Post: React.FC<PostProps> = (initialProps) => {
   }, [type, parent, syncState.posts, registerPost]);
 
   const parentData = parent != null ? syncState.posts[parent] : null;
-
+  console.log(
+    `[Post Component] Render post id=${id} type=${type} parent=${parent} parentData=`,
+    parentData
+  );
   const [showCompose, setShowCompose] = useState<{
     mode: "post" | "quote" | "reply";
     parentId?: number;
   } | null>(null);
 
-  const date = new Date(created_at);
-  const diffMs = Date.now() - date.getTime();
-  const minutesAgo = Math.floor(diffMs / (1000 * 60));
+  function getTimeLabel(dateStr: string): string {
+    const date = new Date(created_at);
+    const diffMs = Date.now() - date.getTime();
+    const minutesAgo = Math.floor(diffMs / (1000 * 60));
+    if (minutesAgo < 1) return "Now";
+    if (minutesAgo < 60) return `${minutesAgo}m`;
+    if (minutesAgo < 60 * 24) return `${Math.floor(minutesAgo / 60)}h`;
 
-  let timeLabel: string;
-  if (minutesAgo < 1) {
-    timeLabel = "Now";
-  } else if (minutesAgo < 60) {
-    timeLabel = `${minutesAgo}m`;
-  } else if (minutesAgo < 60 * 24) {
-    timeLabel = `${Math.floor(minutesAgo / 60)}h`;
-  } else {
-    // peste 24h
     const isSameYear = date.getFullYear() === new Date().getFullYear();
 
     if (isSameYear) {
       // ex: "Jan 05"
-      timeLabel = date.toLocaleDateString(undefined, {
+      return date.toLocaleDateString(undefined, {
         month: "short",
         day: "numeric",
-      });
-    } else {
-      // ex: "Jan 05, 2023"
-      timeLabel = date.toLocaleDateString(undefined, {
-        month: "short",
-        day: "numeric",
-        year: "numeric",
       });
     }
+
+    // ex: "Jan 05, 2023"
+    return date.toLocaleDateString(undefined, {
+      month: "short",
+      day: "numeric",
+      year: "numeric",
+    });
   }
 
   const { liked, count, toggle } = useToggleLike(post);
@@ -133,9 +131,17 @@ const Post: React.FC<PostProps> = (initialProps) => {
 
   // 5) ramura repost
   if (type === "repost" && parentData) {
+    console.log(
+      "[Post Component] Rendering REPOST. post.id:",
+      id,
+      "parent:",
+      parent,
+      "parentData:",
+      parentData
+    );
     const isMe = user.username === username;
     return (
-      <div className={`flex flex-col`}>
+      <div className="flex flex-col hover:bg-gray-800">
         <div className="flex items-center text-sm text-gray-600 mb-1">
           <Repeat />
           <span className="font-semibold text-gray-600 mr-1">
@@ -175,7 +181,7 @@ const Post: React.FC<PostProps> = (initialProps) => {
             <div className="flex items-center justify-between text-sm text-gray-600">
               <div className="flex items-center">
                 <span
-                  className="font-semibold text-gray-900 mr-2"
+                  className="font-extrabold text-gray-400 mr-2"
                   onClick={(e) => {
                     e.preventDefault();
                     e.stopPropagation();
@@ -192,12 +198,15 @@ const Post: React.FC<PostProps> = (initialProps) => {
                 >
                   @{username}
                 </span>
-                <span title={date.toLocaleString()}>{timeLabel}</span>
+                <span title={new Date(created_at).toLocaleString()}>
+                  {getTimeLabel(created_at)}
+                </span>
               </div>
               {!hideInteractive && (
                 <div className="flex items-center space-x-1">
                   <PostMenu
                     isMe={user.username === username}
+                    type={post.type}
                     onDelete={() => setShowDelete(true)}
                     onAddFriend={() => {
                       // TODO: Pune logica de Add Friend (API)
@@ -254,11 +263,47 @@ const Post: React.FC<PostProps> = (initialProps) => {
               {/* quote */}
               {initialProps.type === "quote" &&
                 parentData &&
-                parentData.id !== post.id && (
-                  <div className="border rounded mt-2">
+                parentData.id !== post.id &&
+                (parentData.type === "quote" ? (
+                  <div
+                    className="border rounded mt-2 p-2 cursor-pointer hover:bg-gray-500"
+                    onClick={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      navigate(
+                        `/${parentData.username}/posts/${parentData.id}`
+                      );
+                    }}
+                  >
+                    <div className="text-sm text-gray-400 flex items-center ">
+                      <img
+                        src={parentData.avatar_url}
+                        className="w-8 h-8 rounded-full mr-4"
+                      ></img>
+                      <span className="font-extrabold mr-2">
+                        {parentData.display_name}
+                      </span>
+                      <span className=" mr-2">@{parentData.username}</span>
+                      <span>{getTimeLabel(parentData.created_at)}</span>
+                    </div>
+                    <div className="truncate">
+                      {parentData.description.slice(0, 30)}...
+                    </div>
+                  </div>
+                ) : (
+                  <div
+                    className="border rounded mt-2 hover:bg-gray-500"
+                    onClick={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      navigate(
+                        `/${parentData.username}/posts/${parentData.id}`
+                      );
+                    }}
+                  >
                     <Post {...parentData} hideInteractive disableNavigate />
                   </div>
-                )}
+                ))}
               {initialProps.type === "quote" &&
                 parentData &&
                 parentData.id === post.id && (
@@ -275,7 +320,16 @@ const Post: React.FC<PostProps> = (initialProps) => {
                   onClick={(e) => {
                     e.preventDefault();
                     e.stopPropagation();
-                    setShowCompose({ mode: "reply", parentId: post.id });
+                    if (!disableNavigate) {
+                      setShowCompose({
+                        mode: "reply",
+                        parentId: parentData ? parentData.id : post.id,
+                      });
+                    }
+                    setShowCompose({
+                      mode: "reply",
+                      parentId: post.id,
+                    });
                   }}
                   className="cursor-pointer flex items-center space-x-1 "
                 >
