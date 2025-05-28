@@ -19,6 +19,7 @@ type AuthContextType = {
   isReady: boolean;
   user: AuthUser | null;
   profile: UserProfile | null;
+  updateProfile: (p: UserProfile) => void;
   signIn: (credentials: SignInCredentials) => Promise<void>;
   signOut: () => void;
   loading: boolean;
@@ -34,6 +35,10 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     JSON.parse(localStorage.getItem("user") || "null")
   );
   const [profile, setProfile] = useState<UserProfile | null>(null);
+  const updateProfile = (p: UserProfile) => {
+    setProfile(p);
+    localStorage.setItem("profile", JSON.stringify(p));
+  };
   const [loading, setLoading] = useState(true);
   const [isReady, setIsReady] = useState(false);
 
@@ -50,7 +55,10 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         setUser(res.data);
         return api.get<UserProfile>("profile/me");
       })
-      .then((res) => setProfile(res.data))
+      .then((res) => {
+        setProfile(res.data);
+        localStorage.setItem("profile", JSON.stringify(res.data)); // optional
+      })
       .catch(() => signOut())
       .finally(() => {
         setLoading(false);
@@ -110,6 +118,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     profile,
     signIn,
     signOut,
+    updateProfile,
     loading,
     isReady: !loading,
   };

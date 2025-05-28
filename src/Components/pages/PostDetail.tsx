@@ -1,10 +1,12 @@
-import  {  useEffect } from "react";
+import { useEffect } from "react";
 import { useParams, Navigate } from "react-router-dom";
 import { fetchPost, fetchReplies } from "../../api";
 import Post from "../Feed/Post2";
 import { PostProps } from "../Feed/Post2";
 import PostForm from "../PostForm2";
 import { usePostSyncContext } from "../../contexts/PostSyncContext";
+import { useAuth } from "../AuthContext";
+import { useUserProfiles } from "../../contexts/UserProfilesContext";
 
 const sortByDate = (a: PostProps, b: PostProps) =>
   new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
@@ -12,6 +14,8 @@ const sortByDate = (a: PostProps, b: PostProps) =>
 const PostDetail = () => {
   const { id } = useParams<{ id: string }>();
   const { state, replaceWithPostDetail } = usePostSyncContext();
+  const { user, profile: myProfile } = useAuth();
+  const { profiles, fetchProfile } = useUserProfiles();
 
   console.log("PostSyncContext state on PostDetail:", state);
 
@@ -42,12 +46,28 @@ const PostDetail = () => {
     []
   ).sort(sortByDate);
 
+  useEffect(() => {
+    if (post && post.username !== user?.username && !profiles[post.username]) {
+      fetchProfile(post.username).catch(console.error);
+    }
+  }, [post, user, profiles, fetchProfile]);
+
   if (!post) return <div>Loading…</div>;
+
+  const isMe = post.username === user?.username;
+  const authorProfile = isMe ? myProfile : profiles[post.username];
+  const avatarSrc = authorProfile?.profile_image ?? post.avatar_url;
+  const nameToShow = authorProfile?.name ?? post.display_name;
 
   return (
     <>
       <div className="max-w-2xl mx-auto">
-        <Post {...post} disableNavigate={true} />
+        <Post
+          {...post}
+          disableNavigate={true}
+          avatar_url={avatarSrc}
+          display_name={nameToShow}
+        />
       </div>
       <div className="border-b">
         <div className="flex items-center">
@@ -64,7 +84,14 @@ const PostDetail = () => {
         {replies.length === 0 ? (
           <p className="p-4 text-gray-500">There are no comments yet.</p>
         ) : (
-          replies.map((r) => <Post key={r.id} {...r} />)
+          replies.map((r) => (
+            <Post
+              key={r.id}
+              {...r}
+              avatar_url={profiles[r.username]?.profile_image ?? r.avatar_url}
+              display_name={profiles[r.username]?.name ?? r.display_name}
+            />
+          ))
         )}
       </div>
     </>

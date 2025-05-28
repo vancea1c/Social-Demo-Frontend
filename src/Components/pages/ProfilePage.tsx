@@ -2,12 +2,13 @@ import React, { useEffect, useState } from "react";
 import ReactDOM from "react-dom";
 import { useParams } from "react-router-dom";
 import { useAuth } from "../AuthContext";
+import { usePostSyncContext } from "../../contexts/PostSyncContext";
+import { useUserProfiles } from "../../contexts/UserProfilesContext";
 import api from "../../api";
 import EditProfileForm from "../Widgets/EditProfileForm";
 import { UserProfile } from "../../contexts/types";
 import { Calendar } from "react-feather";
 import { fetchUserPosts } from "../../api";
-import { usePostSyncContext } from "../../contexts/PostSyncContext";
 import Post, { PostProps } from "../Feed/Post2";
 
 const sortByDate = (a: PostProps, b: PostProps) =>
@@ -15,7 +16,8 @@ const sortByDate = (a: PostProps, b: PostProps) =>
 
 const ProfilePage: React.FC = () => {
   const { username: paramUsername } = useParams<{ username: string }>();
-  const { user } = useAuth();
+  const { user, updateProfile: updateAuthProfile } = useAuth();
+  const { fetchProfile, updateProfile } = useUserProfiles();
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [loading, setLoading] = useState(true);
   const [showEditModal, setShowEditModal] = useState(false);
@@ -29,6 +31,7 @@ const ProfilePage: React.FC = () => {
         const endpoint = isOwner ? "profile/me/" : `profile/${paramUsername}/`;
         const res = await api.get<UserProfile>(endpoint);
         setProfile(res.data);
+        updateProfile(res.data);
       } catch (err) {
         console.error("Error fetching profile:", err);
       } finally {
@@ -42,19 +45,22 @@ const ProfilePage: React.FC = () => {
     if (!paramUsername) return;
     fetchUserPosts(paramUsername)
       .then((data) => {
-        const posts = data.results;
+        const postsList: PostProps[] = Array.isArray(data)
+          ? data
+          : data.results ?? [];
+
         const links: Record<number, number[]> = {};
-        posts.forEach((p) => {
+        postsList.forEach((p) => {
           if (p.parent != null) {
             links[p.parent] = [...(links[p.parent] || []), p.id];
           }
         });
-        replaceWithProfile(posts, links);
+        replaceWithProfile(postsList, links);
       })
       .catch((err) => {
         console.error("Error fetching user posts:", err);
       });
-  }, [paramUsername, replaceWithProfile]);
+  }, [paramUsername]);
 
   const posts = Object.values(state.posts).sort(sortByDate);
 
@@ -153,7 +159,14 @@ const ProfilePage: React.FC = () => {
           <EditProfileForm
             initialData={profile}
             onClose={() => setShowEditModal(false)}
-            onSave={handleUpdate}
+            onSave={(updatedProfile) => {
+              handleUpdate(updatedProfile);
+              if (isOwner) {
+                updateAuthProfile(updatedProfile);
+              }
+              updateProfile(updatedProfile);
+              console.log("Cached profile now:", updatedProfile.profile_image);
+            }}
           />,
           document.body
         )}

@@ -1,15 +1,16 @@
 import React, { useEffect, useState } from "react";
 import { MessageCircle, Repeat, Heart } from "react-feather";
 import api, { fetchPost } from "../../api";
-import { usePostSync } from "../usePostSync";
-import RepostMenu from "./RepostMenu";
-import ComposeModal from "../Widgets/ComposeModal";
-import { useToggleLike } from "../useToggleLike";
-import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "../AuthContext";
+import { usePostSyncContext } from "../../contexts/PostSyncContext";
+import { useUserProfiles } from "../../contexts/UserProfilesContext";
+import { useToggleLike } from "../useToggleLike";
+import { usePostSync } from "../usePostSync";
+import { Link, useNavigate } from "react-router-dom";
 import PostMenu from "./PostMenu";
 import ConfirmDialog from "./ConfirmDialog";
-import { usePostSyncContext } from "../../contexts/PostSyncContext";
+import RepostMenu from "./RepostMenu";
+import ComposeModal from "../Widgets/ComposeModal";
 
 export interface MediaType {
   id: number;
@@ -39,7 +40,8 @@ export interface PostProps {
 const Post: React.FC<PostProps> = (initialProps) => {
   const { post, setPost } = usePostSync(initialProps);
   const { state: syncState, registerPost } = usePostSyncContext();
-  const { user } = useAuth();
+  const { user, profile: myProfile } = useAuth();
+  const { profiles, fetchProfile } = useUserProfiles();
   const navigate = useNavigate();
   if (!user) {
     return <div>Loading…</div>;
@@ -58,6 +60,17 @@ const Post: React.FC<PostProps> = (initialProps) => {
     hideInteractive = false,
     disableNavigate = false,
   } = post;
+
+  useEffect(() => {
+    if (username !== user.username && !profiles[username]) {
+      fetchProfile(username).catch(console.error);
+    }
+  }, [username, user.username, profiles, fetchProfile]);
+  const isMe = username === user.username;
+  const authorProfile = isMe ? myProfile : profiles[username];
+  const avatarSrc = authorProfile?.profile_image ?? avatar_url;
+  const nameToShow = authorProfile?.name ?? display_name;
+
   useEffect(() => {
     if ((type === "repost" || type === "quote") && parent != null) {
       if (!syncState.posts[parent]) {
@@ -139,13 +152,13 @@ const Post: React.FC<PostProps> = (initialProps) => {
       "parentData:",
       parentData
     );
-    const isMe = user.username === username;
+    const reposterName = isMe ? "You" : nameToShow;
     return (
       <div className="flex flex-col hover:bg-gray-800">
         <div className="flex items-center text-sm text-gray-600 mb-1">
           <Repeat />
           <span className="font-semibold text-gray-600 mr-1">
-            {isMe ? "You" : display_name}
+            {reposterName}
           </span>
           <span className="text-gray-500">reposted</span>
         </div>
@@ -171,8 +184,8 @@ const Post: React.FC<PostProps> = (initialProps) => {
               e.preventDefault();
               e.stopPropagation();
             }}
-            src={avatar_url}
-            alt={`${display_name} avatar`}
+            src={avatarSrc}
+            alt={`${nameToShow} avatar`}
             className="w-12 h-12 rounded-full mr-4"
           />
 
@@ -187,7 +200,7 @@ const Post: React.FC<PostProps> = (initialProps) => {
                     e.stopPropagation();
                   }}
                 >
-                  {display_name}
+                  {nameToShow}
                 </span>
                 <span
                   className="mr-2 text-gray-500"
@@ -205,7 +218,7 @@ const Post: React.FC<PostProps> = (initialProps) => {
               {!hideInteractive && (
                 <div className="flex items-center space-x-1">
                   <PostMenu
-                    isMe={user.username === username}
+                    isMe={isMe}
                     type={post.type}
                     onDelete={() => setShowDelete(true)}
                     onAddFriend={() => {

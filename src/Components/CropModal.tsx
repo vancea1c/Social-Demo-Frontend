@@ -119,19 +119,20 @@ const CropModal: React.FC<CropModalProps> = ({
           )}
         </div>
         <div className="flex items-center space-x-2 p-3 bg-black border-t border-gray-700">
-          {ratioOptions.map(({ label, value }) => (
-            <button
-              key={label}
-              onClick={() => setAspect(value)}
-              className={`px-3 py-1 rounded ${
-                aspect === value
-                  ? "bg-blue-600 text-white"
-                  : "bg-gray-800 text-gray-300"
-              }`}
-            >
-              {label}
-            </button>
-          ))}
+          {applyLabel !== "Apply" &&
+            ratioOptions.map(({ label, value }) => (
+              <button
+                key={label}
+                onClick={() => setAspect(value)}
+                className={`px-3 py-1 rounded ${
+                  aspect === value
+                    ? "bg-blue-600 text-white"
+                    : "bg-gray-800 text-gray-300"
+                }`}
+              >
+                {label}
+              </button>
+            ))}
           <input
             type="range"
             min={1}

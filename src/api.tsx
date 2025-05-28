@@ -1,5 +1,6 @@
 import axios from "axios";
 import { PostProps } from "./Components/Feed/Post2";
+import { UserProfile } from "./contexts/types";
 const api = axios.create({
   baseURL: "http://localhost:8000/api/", // URL-ul backend-ului tău Django+DRF
   withCredentials: true, // să trimită cookie-ul de sesiune
@@ -38,6 +39,21 @@ api.interceptors.response.use(
     return Promise.reject(err);
   }
 );
+
+export const fetchUserProfile = (username: string) =>
+  api.get<UserProfile>(`/profile/${username}/`).then((res) => res.data);
+
+export const fetchMyProfile = () =>
+  api.get<UserProfile>(`/profile/me/`).then((res) => res.data);
+
+export const updateUserProfile = (
+  username: string,
+  payload: Partial<UserProfile> | FormData
+) =>
+  api
+    .patch<UserProfile>(`/profile/${username}/`, payload)
+    .then((res) => res.data);
+
 export const fetchPost = (id: number) => {
   console.log(`[API] fetchPost id=${id}`);
   return api.get<PostProps>(`/posts/${id}/`).then((res) => {
@@ -57,7 +73,9 @@ export const fetchPosts = (params?: { type?: string }) => {
 };
 export const fetchUserPosts = (username: string, page: number = 1) => {
   return api
-    .get<Paginated<PostProps>>(`/posts/?author__username=${username}&page=${page}`)
+    .get<Paginated<PostProps>>(
+      `/posts/?author__username=${username}&page=${page}`
+    )
     .then((res) => res.data); // return only the data, not the full AxiosResponse
 };
 

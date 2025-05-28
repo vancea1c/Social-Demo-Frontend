@@ -2,6 +2,8 @@ import { NavLink, useNavigate } from "react-router-dom";
 import { Home, Bell, Mail, Settings, User } from "react-feather";
 import LogOutButton from "./home_page/LogOutButton";
 import { useAuth } from "./AuthContext";
+import { useUserProfiles } from "../contexts/UserProfilesContext";
+import { useEffect } from "react";
 
 interface NavItem {
   to: string;
@@ -13,10 +15,20 @@ interface SidebarProps {
 }
 
 const Sidebar: React.FC<SidebarProps> = ({ onComposeClick }) => {
-  const { user, profile, loading } = useAuth();
+  const { user, loading } = useAuth();
+  const { profiles, fetchProfile } = useUserProfiles();
+
+  useEffect(() => {
+    if (!loading && user) {
+      fetchProfile(user.username).catch(console.error);
+    }
+  }, [loading, user?.username]);
 
   if (loading) return <div>Loading...</div>;
-  if (!user || !profile) return null; // sau loading spinner
+  if (!user) return null;
+  const me = profiles[user.username];
+  const avatarSrc = me?.profile_image || "/default.jpg";
+  const display_name = me?.name || `${user.first_name} ${user.last_name}`;
 
   const navItems: NavItem[] = [
     { to: "/home", label: "Home", Icon: Home },
@@ -25,6 +37,7 @@ const Sidebar: React.FC<SidebarProps> = ({ onComposeClick }) => {
     { to: "/settings", label: "Settings", Icon: Settings },
     { to: `/${user.username}`, label: "Profile", Icon: User },
   ];
+  console.log("Sidebar sees profiles:", profiles);
 
   return (
     <div>
@@ -62,11 +75,11 @@ const Sidebar: React.FC<SidebarProps> = ({ onComposeClick }) => {
       <div className="mt-auto flex items-center space-x-3 hover:bg-gray-800 p-2 rounded-full transition cursor-pointer">
         <img
           className="w-10 h-10 rounded-full object-cover"
-          src={profile.profile_image || "/default.png"}
+          src={avatarSrc}
           alt={`${user.first_name} ${user.last_name}`}
         />
         <div className="flex-1">
-          <div className="font-semibold">{`${user.first_name} ${user.last_name}`}</div>
+          <div className="font-semibold">{display_name}</div>
           <div className="text-gray-400">@{user.username}</div>
         </div>
         <LogOutButton />
