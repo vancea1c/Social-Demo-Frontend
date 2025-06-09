@@ -11,7 +11,7 @@ export interface PostFormProps {
   type?: "post" | "quote" | "reply";
   initialDescription?: string;
   onReply?: (updateParent: PostProps) => void;
-  onQuote?: (counts: { reposts_count: number }) => void;
+  onQuote?: (updatedParent: PostProps) => void;
 }
 
 const MAX_MEDIA = 4;
@@ -98,14 +98,12 @@ const PostForm: React.FC<PostFormProps> = ({
 
     try {
       if (type === "reply" && parentId) {
-        // call our new /posts/{id}/reply/ endpoint
         const { data } = await replyToPost(parentId, text);
         onReply?.(data.parent_post);
       } else if (type === "quote" && parentId) {
-        // call our new /posts/{id}/quote/ endpoint
         await quotePost(parentId, text, files);
         const { data: updatedParent } = await fetchPost(parentId);
-        onQuote?.({ reposts_count: updatedParent.reposts_count });
+        onQuote?.(updatedParent);
       } else {
         // a brand-new post (no parent)
         await createPost(text, files);

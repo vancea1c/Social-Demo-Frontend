@@ -36,12 +36,16 @@ export function isPasswordValid(pw: string): boolean {
 interface PasswordInputProps {
   onValidPassword: (password: string) => void;
   showError?: boolean;
+  title?: string;
+  serverError?: string | null;
 }
 
 // -------------------- Main component --------------------
 const PasswordInput: React.FC<PasswordInputProps> = ({
   onValidPassword,
   showError: externalShowError,
+  title = "Password",
+  serverError,
 }) => {
   const groupRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -61,7 +65,8 @@ const PasswordInput: React.FC<PasswordInputProps> = ({
   const allValid = overallValid && matches;
   const hasAnyInput = password.length > 0 || confirmPassword.length > 0;
   const errorActive =
-    !overallValid && ((externalShowError ?? false) || localShowError);
+    (!overallValid && ((externalShowError ?? false) || localShowError)) ||
+    Boolean(serverError);
 
   // Notify parent when fully valid
   useEffect(() => {
@@ -126,6 +131,7 @@ const PasswordInput: React.FC<PasswordInputProps> = ({
 
   return (
     <div className="relative max-w-md">
+      {serverError && <p className="text-red-600 mb-2">{serverError}</p>}
       {/* ─── Password group ─── */}
       <div
         ref={groupRef}
@@ -138,7 +144,7 @@ const PasswordInput: React.FC<PasswordInputProps> = ({
           htmlFor="password"
           className={errorActive ? "text-red-600 font-medium" : "font-medium"}
         >
-          {errorActive ? "Invalid Password" : "Password"}
+          {errorActive ? `Invalid ${title}` : `${title}`}
         </label>
 
         <div className="relative mt-1">
@@ -216,7 +222,7 @@ const PasswordInput: React.FC<PasswordInputProps> = ({
       {/* ─── Confirm-password ─── */}
       <div>
         <label htmlFor="confirmPassword" className="font-medium">
-          Confirm Password
+          Confirm {title}
         </label>
         <input
           id="confirmPassword"

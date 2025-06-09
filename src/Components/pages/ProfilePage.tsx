@@ -4,6 +4,7 @@ import { useParams } from "react-router-dom";
 import { useAuth } from "../AuthContext";
 import { usePostSyncContext } from "../../contexts/PostSyncContext";
 import { useUserProfiles } from "../../contexts/UserProfilesContext";
+import { usePageTitle } from "../../contexts/PageTitleContext";
 import api from "../../api";
 import EditProfileForm from "../Widgets/EditProfileForm";
 import { UserProfile } from "../../contexts/types";
@@ -16,53 +17,92 @@ const sortByDate = (a: PostProps, b: PostProps) =>
 
 const ProfilePage: React.FC = () => {
   const { username: paramUsername } = useParams<{ username: string }>();
-  const { user, updateProfile: updateAuthProfile } = useAuth();
-  const { fetchProfile, updateProfile } = useUserProfiles();
+  const {
+    user,
+    isReady,
+    profile: authProfile,
+    updateProfile: updateAuthProfile,
+  } = useAuth();
+  const {
+    profiles,
+    fetchProfile,
+    updateProfile: updateUserProfileContext,
+  } = useUserProfiles();
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [loading, setLoading] = useState(true);
   const [showEditModal, setShowEditModal] = useState(false);
   const isOwner = user?.username === paramUsername;
   const { state, replaceWithProfile } = usePostSyncContext();
 
+  usePageTitle(`${paramUsername}`);
+
+  // Load profile: from AuthContext if owner, else from cache or fetch once
   useEffect(() => {
-    const fetchProfile = async () => {
-      setLoading(true);
+    if (!paramUsername) return;
+    setLoading(true);
+
+    (async () => {
       try {
-        const endpoint = isOwner ? "profile/me/" : `profile/${paramUsername}/`;
-        const res = await api.get<UserProfile>(endpoint);
-        setProfile(res.data);
-        updateProfile(res.data);
+        let prof: UserProfile;
+
+        if (isOwner) {
+          // Use context value for owner
+          prof = authProfile!;
+        } else {
+          if (profiles[paramUsername]) {
+            prof = profiles[paramUsername];
+          } else {
+            prof = await fetchProfile(paramUsername);
+            updateUserProfileContext(prof);
+          }
+        }
+
+        setProfile(prof);
       } catch (err) {
         console.error("Error fetching profile:", err);
       } finally {
         setLoading(false);
       }
-    };
-    if (paramUsername) fetchProfile();
-  }, [paramUsername, isOwner]);
+    })();
+  }, [paramUsername, isOwner, authProfile, fetchProfile]);
 
   useEffect(() => {
     if (!paramUsername) return;
     fetchUserPosts(paramUsername)
       .then((data) => {
-        const postsList: PostProps[] = Array.isArray(data)
+        const allPosts: PostProps[] = Array.isArray(data)
           ? data
           : data.results ?? [];
-
+        // rebuild links map from the filtered list
         const links: Record<number, number[]> = {};
-        postsList.forEach((p) => {
+        allPosts.forEach((p) => {
           if (p.parent != null) {
             links[p.parent] = [...(links[p.parent] || []), p.id];
           }
         });
-        replaceWithProfile(postsList, links);
+
+        replaceWithProfile(allPosts, links);
       })
       .catch((err) => {
         console.error("Error fetching user posts:", err);
       });
-  }, [paramUsername]);
+  }, [paramUsername, replaceWithProfile]);
 
-  const posts = Object.values(state.posts).sort(sortByDate);
+  const posts = Object.values(state.posts)
+    .filter((p) => p.username === paramUsername)
+    .sort(sortByDate);
+  console.log(
+    `[Profile Page of ${paramUsername} ] Posts to render:`,
+    posts.map((p) => ({
+      id: p.id,
+      type: p.type,
+      parent: p.parent,
+      liked_by_user: p.liked_by_user,
+      likes_count: p.likes_count,
+      reposted_by_user: p.reposted_by_user,
+      username: p.username,
+    }))
+  );
 
   const handleFriendRequest = async () => {
     if (!profile) return;
@@ -75,16 +115,18 @@ const ProfilePage: React.FC = () => {
   };
 
   const handleUpdate = (updated: UserProfile) => {
-    console.log("PROFILE UPDATED", updated);
     setProfile(updated);
+    // update contexts on save
+    if (isOwner) {
+      updateAuthProfile(updated);
+    }
+    updateUserProfileContext(updated);
   };
 
-  if (loading) return <div>Loading...</div>;
+  if (loading || !isReady) return <div>Loading...</div>;
   if (!profile) return <div>Profile not found</div>;
-  let joinedDate: Date | null = null;
-  if (profile.date_joined) {
-    joinedDate = new Date(profile.date_joined);
-  }
+
+  const joinedDate = profile.date_joined ? new Date(profile.date_joined) : null;
 
   return (
     <div className="profile-page">
@@ -139,7 +181,10 @@ const ProfilePage: React.FC = () => {
           <button onClick={handleFriendRequest}>Add Friend</button>
         )}
       </div>
-
+      <div className="w-full flex-col">
+        <button className="">Posts</button>
+        <button className="">Likes</button>
+      </div>
       {/* Posts placeholder */}
       <div className="posts-feed">
         {posts.length === 0 ? (
@@ -159,14 +204,7 @@ const ProfilePage: React.FC = () => {
           <EditProfileForm
             initialData={profile}
             onClose={() => setShowEditModal(false)}
-            onSave={(updatedProfile) => {
-              handleUpdate(updatedProfile);
-              if (isOwner) {
-                updateAuthProfile(updatedProfile);
-              }
-              updateProfile(updatedProfile);
-              console.log("Cached profile now:", updatedProfile.profile_image);
-            }}
+            onSave={handleUpdate}
           />,
           document.body
         )}

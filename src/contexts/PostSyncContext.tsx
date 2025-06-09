@@ -9,6 +9,7 @@ import React, {
 import type { PostProps } from "../Components/Feed/Post2";
 import { useAuth } from "../Components/AuthContext";
 import { fetchPost, fetchPosts } from "../api";
+import { useLocation } from "react-router-dom";
 
 type ContextPostProps = PostProps & {
   parent_post?: PostProps;
@@ -30,7 +31,7 @@ type Action =
 
 function reducer(state: State, action: Action): State {
   let newState: State = state;
-  console.log("[PostSync Reducer] Action:", action);
+  // console.log("[PostSync Reducer] Action:", action);
   switch (action.type) {
     case "INIT": {
       newState = action.payload;
@@ -42,16 +43,16 @@ function reducer(state: State, action: Action): State {
       const post = action.post;
       const posts = { ...state.posts, [post.id]: post };
       const links = { ...state.links };
-      console.log(
-        "[Reducer REGISTER] id:",
-        post.id,
-        "type:",
-        post.type,
-        "parent:",
-        post.parent,
-        "post:",
-        post
-      );
+      // console.log(
+      //   "[Reducer REGISTER] id:",
+      //   post.id,
+      //   "type:",
+      //   post.type,
+      //   "parent:",
+      //   post.parent,
+      //   "post:",
+      //   post
+      // );
 
       if (post.parent !== null && post.parent !== undefined) {
         const arr = links[post.parent] || [];
@@ -76,7 +77,15 @@ function reducer(state: State, action: Action): State {
         console.log(`[PostSync Reducer] After ${action.type}:`, newState);
         break;
       }
-      const SKIP_SYNC_KEYS = ["id", "type", "parent", "created_at"];
+      const SKIP_SYNC_KEYS = [
+        "id",
+        "type",
+        "parent",
+        "created_at",
+        "username",
+        "display_name",
+        "avatar_url",
+      ];
       // filtrăm undefined și excludem id-ul ca să nu-l propagăm copiilor
       const filtered = Object.fromEntries(
         Object.entries(action.data).filter(
@@ -141,6 +150,7 @@ const PostSyncContext = createContext<{
   state: State;
   registerPost: (post: PostProps) => void;
   updatePost: (id: number, data: Partial<PostProps>) => void;
+  unregisterPost: (id: number) => void;
   setOnNewPost?: (fn: (post: PostProps) => void) => void;
   replaceWithFeed: (posts: PostProps[], links: LinkMap) => void;
   replaceWithPostDetail: (data: {
@@ -153,6 +163,7 @@ const PostSyncContext = createContext<{
   state: { posts: {}, links: {} },
   registerPost: () => {},
   updatePost: () => {},
+  unregisterPost: () => {},
   replaceWithFeed: () => {},
   replaceWithPostDetail: () => {},
   replaceWithProfile: () => {},
@@ -169,30 +180,7 @@ export const PostSyncProvider: React.FC<React.PropsWithChildren> = ({
     onNewPostRef.current = cb;
   };
   const { token, isReady } = useAuth();
-
-  // 1. FETCH INIȚIAL LA MONTARE (bulk INIT)
-  useEffect(() => {
-    if (!token || !isReady) return;
-
-    fetchPosts().then((response) => {
-      const data: PostProps[] = Array.isArray(response.data)
-        ? response.data
-        : response.data.results;
-
-      const posts: Record<number, PostProps> = {};
-      const links: Record<number, number[]> = {};
-
-      data.forEach((p) => {
-        posts[p.id] = p;
-        if (p.type === "repost" && p.parent != null) {
-          links[p.parent] = [...(links[p.parent] || []), p.id];
-        }
-      });
-
-      dispatch({ type: "INIT", payload: { posts, links } });
-    });
-  }, [token, isReady]);
-
+  const location = useLocation();
   // 2. Real-time sync via WebSocket
   useEffect(() => {
     if (!token || !isReady) return;
@@ -206,49 +194,51 @@ export const PostSyncProvider: React.FC<React.PropsWithChildren> = ({
     };
 
     ws.onmessage = (e) => {
+      let msg: { type: string; data: PostProps };
       try {
-        const { type, data } = JSON.parse(e.data);
-        console.log("WS MSG:", type, data);
-
-        switch (type) {
-          case "post_create":
-            if (
-              (data.type === "repost" ||
-                data.type === "quote" ||
-                data.type === "reply") &&
-              data.parent &&
-              !(state.posts && state.posts[data.parent])
-            ) {
-              fetchPost(data.parent).then((res) => {
-                dispatch({ type: "REGISTER", post: res.data });
-              });
-            }
-            dispatch({ type: "REGISTER", post: data });
-            onNewPostRef.current?.(data);
-            break;
-
-          case "post_update":
-            if (
-              data.parent_post &&
-              typeof data.parent_post === "object" &&
-              data.parent_post.id
-            ) {
-              dispatch({
-                type: "UPDATE",
-                id: data.parent_post.id,
-                data: data.parent_post,
-              });
-            } else if (data.id) {
-              dispatch({ type: "UPDATE", id: data.id, data });
-            }
-            break;
-
-          case "post_delete":
-            dispatch({ type: "UNREGISTER", id: data.id });
-            break;
-        }
+        msg = JSON.parse(e.data);
+        console.log("WS MSG:", msg.type, msg.data);
       } catch (err) {
         console.error("WS parse error", err);
+        return;
+      }
+      const { type, data } = msg;
+
+      switch (type) {
+        case "post_create":
+          if (
+            (data.type === "repost" ||
+              data.type === "quote" ||
+              data.type === "reply") &&
+            data.parent &&
+            !(state.posts && state.posts[data.parent])
+          ) {
+            fetchPost(data.parent).then((res) => {
+              dispatch({ type: "REGISTER", post: res.data });
+            });
+          }
+          dispatch({ type: "REGISTER", post: data });
+          onNewPostRef.current?.(data);
+          break;
+
+        case "post_update":
+          dispatch({ type: "UPDATE", id: data.id, data });
+          break;
+
+        case "post_user_update":
+          dispatch({
+            type: "UPDATE",
+            id: data.id,
+            data: {
+              liked_by_user: data.liked_by_user,
+              reposted_by_user: data.reposted_by_user,
+            },
+          });
+          break;
+
+        case "post_delete":
+          dispatch({ type: "UNREGISTER", id: data.id });
+          break;
       }
     };
 
@@ -265,6 +255,10 @@ export const PostSyncProvider: React.FC<React.PropsWithChildren> = ({
   const updatePost = (id: number, data: Partial<PostProps>) =>
     dispatch({ type: "UPDATE", id, data });
 
+  const unregisterPost = useCallback((id: number) => {
+    dispatch({ type: "UNREGISTER", id });
+  }, []);
+
   const replaceWithFeed = useCallback((posts: PostProps[], links: LinkMap) => {
     const postMap: Record<number, PostProps> = {};
     posts.forEach((p) => {
@@ -272,7 +266,7 @@ export const PostSyncProvider: React.FC<React.PropsWithChildren> = ({
     });
     dispatch({ type: "INIT", payload: { posts: postMap, links } });
   }, []);
-  
+
   const replaceWithPostDetail = useCallback(
     ({
       post,
@@ -308,6 +302,7 @@ export const PostSyncProvider: React.FC<React.PropsWithChildren> = ({
         state,
         registerPost,
         updatePost,
+        unregisterPost,
         setOnNewPost,
         replaceWithFeed,
         replaceWithPostDetail,

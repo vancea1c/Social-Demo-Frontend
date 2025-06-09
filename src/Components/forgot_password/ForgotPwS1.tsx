@@ -1,40 +1,65 @@
 import { useState } from "react";
-import axios from "axios";
+import api from "../../api";
 import { useForgotPwContext } from "./ForgotPwContext";
+import { z } from "zod";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { useForm } from "react-hook-form";
+
+const FPWS1Schema = z.object({
+  identifier: z.string().min(1, { message: "Username/Email is required." }),
+});
+type FPWS1Data = z.infer<typeof FPWS1Schema>;
 
 const ForgotPwStep1 = () => {
+  const {
+    register,
+    handleSubmit,
+    setError,
+    formState: { errors },
+  } = useForm<FPWS1Data>({
+    resolver: zodResolver(FPWS1Schema),
+  });
+
   const { setFormData, nextStep } = useForgotPwContext();
-  const [identifier, setIdentifier] = useState("");
-  const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
-  const handleSendCode = async (identifier: string) => {
-    setError(null);
+  const onSubmit = async (data: FPWS1Data) => {
     setLoading(true);
+
     try {
-      // ① apelează endpoint-ul de trimitere cod
-      console.log("buna ziua!!");
-      const res = await axios.post("/api/accounts/forgot-password/", {
+      const identifier = data.identifier.trim();
+      await api.post("accounts/forgot-password/", {
         identifier,
       });
-      console.log(res);
-      // ② salvează identifier în context
+
       setFormData({ identifier });
-      // ③ treci la pasul următor (step 2: verify)
       nextStep();
-    } catch (err: any) {
-      setError(
-        err.response?.data?.identifier?.[0] ||
-          err.response?.data?.detail ||
-          "Failed to send code"
-      );
+    } catch (error: any) {
+      const res = error.response?.data;
+
+      console.log("❌ Step 1 error:", res);
+      if (res) {
+        if (Array.isArray(res.identifier) && res.identifier.length > 0) {
+          setError("identifier", {
+            type: "server",
+            message: res.identifier[0],
+          });
+        } else if (res.detail) {
+          const msg = Array.isArray(res.detail) ? res.detail[0] : res.detail;
+          setError("identifier", { type: "server", message: msg });
+        }
+      } else {
+        setError("identifier", {
+          type: "server",
+          message: "Unable to reach server. Please check your connection.",
+        });
+      }
     } finally {
       setLoading(false);
     }
   };
-
   return (
-    <div className="form">
+    <form onSubmit={handleSubmit(onSubmit)} className="form">
       <div className="header">
         <h2>Account recovery</h2>
         <p>Enter your email or username to receive a reset code.</p>
@@ -44,22 +69,25 @@ const ForgotPwStep1 = () => {
         <input
           id="identifier"
           type="text"
-          value={identifier}
-          onChange={(e) => setIdentifier(e.target.value)}
+          {...register("identifier")}
           disabled={loading}
         />
-        {error && <p className="text-danger">{error}</p>}
+        {errors.identifier && (
+          <p className="text-red-600 font-semibold">
+            {errors.identifier.message}
+          </p>
+        )}
       </div>
       <div className="footer">
         <button
-          type="button"
-          onClick={() => handleSendCode(identifier)}
-          disabled={!identifier.trim() || loading}
+          type="submit"
+          className="hover:bg-gray-500 hover:scale-110 active:scale-95 "
+          disabled={loading}
         >
           {loading ? "Sending…" : "Send Code"}
         </button>
       </div>
-    </div>
+    </form>
   );
 };
 

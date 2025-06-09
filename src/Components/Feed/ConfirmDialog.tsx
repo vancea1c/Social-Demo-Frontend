@@ -11,7 +11,7 @@ export default function ConfirmDialog({
   open,
   onConfirm,
   onCancel,
-  text = "Are you sure you want to delete this?",
+  text = "",
 }: ConfirmDialogProps) {
   if (!open) return null;
   return (

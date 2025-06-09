@@ -11,7 +11,7 @@ type Paginated<T> = { results: T[] };
 api.interceptors.request.use((cfg) => {
   const token = localStorage.getItem("accessToken");
   if (token && cfg.headers) {
-    console.log(">> Request token:", localStorage.getItem("accessToken"));
+    // console.log(">> Request token:", localStorage.getItem("accessToken"));
     cfg.headers.Authorization = `Bearer ${token}`;
   }
 
@@ -41,7 +41,7 @@ api.interceptors.response.use(
 );
 
 export const fetchUserProfile = (username: string) =>
-  api.get<UserProfile>(`/profile/${username}/`).then((res) => res.data);
+  api.get<UserProfile>(`/profile/${username}`).then((res) => res.data);
 
 export const fetchMyProfile = () =>
   api.get<UserProfile>(`/profile/me/`).then((res) => res.data);
@@ -55,7 +55,7 @@ export const updateUserProfile = (
     .then((res) => res.data);
 
 export const fetchPost = (id: number) => {
-  console.log(`[API] fetchPost id=${id}`);
+  // console.log(`[API] fetchPost id=${id}`);
   return api.get<PostProps>(`/posts/${id}/`).then((res) => {
     console.log(`[API] fetchPost RESULT id=${id}:`, res.data);
     return res;
@@ -63,7 +63,7 @@ export const fetchPost = (id: number) => {
 };
 
 export const fetchPosts = (params?: { type?: string }) => {
-  console.log(`[API] fetchPosts`, params);
+  // console.log(`[API] fetchPosts`, params);
   return api
     .get<PostProps[] | Paginated<PostProps>>("/posts/", { params })
     .then((res) => {
@@ -83,7 +83,7 @@ export const fetchReplies = (id: number) =>
   api.get<PostProps[]>(`/posts/?type=reply&parent=${id}`);
 
 export const createPost = (description: string, uploads: File[]) => {
-  console.log(`[API] createPost`, { description, uploads });
+  // console.log(`[API] createPost`, { description, uploads });
   const form = new FormData();
   form.append("description", description);
   uploads.forEach((f) => form.append("uploads", f));
@@ -92,17 +92,17 @@ export const createPost = (description: string, uploads: File[]) => {
       headers: { "Content-Type": "multipart/form-data" },
     })
     .then((res) => {
-      console.log("[API] createPost RESULT:", res.data);
+      // console.log("[API] createPost RESULT:", res.data);
       return res;
     });
 };
 
 export const replyToPost = (postId: number, content: string) => {
-  console.log(`[API] replyToPost postId=${postId}, content="${content}"`);
+  // console.log(`[API] replyToPost postId=${postId}, content="${content}"`);
   return api
     .post<ReplyResponse>(`/posts/${postId}/reply/`, { content })
     .then((res) => {
-      console.log(`[API] replyToPost RESULT postId=${postId}:`, res.data);
+      // console.log(`[API] replyToPost RESULT postId=${postId}:`, res.data);
       return res;
     });
 };
@@ -122,25 +122,25 @@ export const quotePost = (
 };
 
 export const repostPost = (postId: number) => {
-  console.log(`[API] repostPost postId=${postId}`);
+  // console.log(`[API] repostPost postId=${postId}`);
   return api.post<PostProps>(`/posts/${postId}/repost/`).then((res) => {
-    console.log(`[API] repostPost RESULT postId=${postId}:`, res.data);
+    // console.log(`[API] repostPost RESULT postId=${postId}:`, res.data);
     return res;
   });
 };
 
 // Like / Unlike
 export const likePost = (id: number) => {
-  console.log(`[API] likePost id=${id}`);
+  // console.log(`[API] likePost id=${id}`);
   return api.post<PostProps>(`/posts/${id}/like/`).then((res) => {
-    console.log(`[API] likePost RESULT id=${id}:`, res.data);
+    // console.log(`[API] likePost RESULT id=${id}:`, res.data);
     return res;
   });
 };
 export const unlikePost = (id: number) => {
-  console.log(`[API] unlikePost id=${id}`);
+  // console.log(`[API] unlikePost id=${id}`);
   return api.delete<PostProps>(`/posts/${id}/like/`).then((res) => {
-    console.log(`[API] unlikePost RESULT id=${id}:`, res.data);
+    // console.log(`[API] unlikePost RESULT id=${id}:`, res.data);
     return res;
   });
 };

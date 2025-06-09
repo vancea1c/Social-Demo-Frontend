@@ -40,7 +40,6 @@
            bg-[#1a1a1a] cursor-pointer transition-colors;
   }
   button:hover {
-    @apply border-[#646cff];
   }
   @media (prefers-color-scheme: light) {
     :root {

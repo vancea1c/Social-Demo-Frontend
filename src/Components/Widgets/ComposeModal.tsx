@@ -11,7 +11,7 @@ export interface ComposeModalProps {
   onClose: () => void;
   onSuccess: () => void;
   onReply?: (updatedParent: PostProps) => void;
-  onQuote?: (counts: { reposts_count: number}) => void;
+  onQuote?: (updatedParent: PostProps) => void;
 }
 
 const ComposeModal: React.FC<ComposeModalProps> = ({
@@ -50,15 +50,16 @@ const ComposeModal: React.FC<ComposeModalProps> = ({
             setParentPost(updated);
             onReply?.(updated);
           }}
-          onQuote={(counts) => {
-            onQuote?.(counts);
+          onQuote={(updated) => {
+            setParentPost(updated);
+            onQuote?.(updated);
           }}
           onSuccess={() => {
             onClose();
           }}
         />
         {/* Dacă e quote, arătăm un mic banner */}
-        {mode === "quote" && parentId && (
+        {mode === "quote" && parentId && parentPost && (
           <Post
             {...(parentPost as PostProps)}
             hideInteractive

@@ -2,6 +2,7 @@ import { Routes, Route, Navigate } from "react-router-dom";
 import { AuthProvider } from "./Components/AuthContext";
 import { PostSyncProvider } from "./contexts/PostSyncContext";
 import { UserProfilesProvider } from "./contexts/UserProfilesContext";
+import { PageTitleProvider } from "./contexts/PageTitleContext";
 import ProtectedRoute from "./hoc/ProtectedRoute";
 
 import Greeting_page from "./Components/pages/Greeting_page";
@@ -12,6 +13,9 @@ import ProfilePage from "./Components/pages/ProfilePage";
 import PostDetail from "./Components/pages/PostDetail";
 import HomePage from "./Components/pages/HomePage";
 import TestingPage from "./Components/pages/TestingPage";
+import SettingsPage from "./Components/pages/SettingsPage";
+import ChangeYPwPage from "./Components/pages/ChangeYPwPage";
+import Goodbye from "./Components/pages/Goodbye";
 
 import Layout from "./Components/Layout";
 function App() {
@@ -27,12 +31,15 @@ function App() {
               <Route path="/log_in" element={<SignIn_page />} />
               <Route path="/forgot_password" element={<ForgotPwPage />}></Route>
               <Route path="/testing" element={<TestingPage />}></Route>
+              <Route path="/goodbye" element={<Goodbye />} />
 
               {/* 2. All authenticated pages share the same Layout/Sidebar */}
               <Route
                 element={
                   <ProtectedRoute>
-                    <Layout />
+                    <PageTitleProvider>
+                      <Layout />
+                    </PageTitleProvider>
                   </ProtectedRoute>
                 }
               >
@@ -42,6 +49,12 @@ function App() {
 
                 {/* 2b. NEW: Catch-all username route at root */}
                 <Route path="/:username" element={<ProfilePage />} />
+                <Route path="/settings" element={<SettingsPage />} />
+
+                <Route
+                  path="/change_your_password"
+                  element={<ChangeYPwPage />}
+                />
               </Route>
 
               {/* 3. Fallback */}

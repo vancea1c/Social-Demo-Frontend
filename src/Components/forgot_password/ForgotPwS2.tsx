@@ -1,19 +1,36 @@
 import { useState, useEffect } from "react";
-import axios from "axios";
+import api from "../../api";
 import { useForgotPwContext } from "./ForgotPwContext";
 import { maskEmail } from "../../utils/mask";
+import { z } from "zod";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { useForm } from "react-hook-form";
+
+const FPWS2Schema = z.object({
+  code: z.string().min(1, { message: "Password reset code is required." }),
+});
+type FPWS2Data = z.infer<typeof FPWS2Schema>;
 
 const RESEND_TIMEOUT = 30; // secunde
 
 const ForgotPwStep2 = () => {
   const { formData, setFormData, nextStep, prevStep } = useForgotPwContext();
-  const [code, setCode] = useState(formData.code || "");
-  const [error, setError] = useState<string | null>(null);
-  const [loading, setLoading] = useState(false);
 
+  const {
+    register,
+    handleSubmit,
+    setError,
+    formState: { errors },
+  } = useForm<FPWS2Data>({
+    resolver: zodResolver(FPWS2Schema),
+    defaultValues: {
+      code: formData.code || "",
+    },
+  });
+
+  const [loading, setLoading] = useState(false);
   const [timer, setTimer] = useState(0);
 
-  // countdown
   useEffect(() => {
     if (timer <= 0) return;
     const id = setInterval(() => setTimer((t) => t - 1), 1000);
@@ -21,16 +38,17 @@ const ForgotPwStep2 = () => {
   }, [timer]);
 
   const triggerResend = async () => {
+    setError("code", { type: "server", message: "" });
     try {
-      setError(null);
-      // retrimite codul
-      await axios.post("/api/accounts/forgot-password/", {
+      await api.post("accounts/forgot-password/", {
         identifier: formData.identifier,
       });
-      setFormData({ identifier: formData.identifier! });
       setTimer(RESEND_TIMEOUT);
     } catch (e: any) {
-      setError("Could not resend code. Try again later.");
+      setError("code", {
+        type: "server",
+        message: "Could not resend code. Please try again later.",
+      });
     }
   };
 
@@ -38,29 +56,46 @@ const ForgotPwStep2 = () => {
     ? maskEmail(formData.identifier)
     : formData.identifier;
 
-  const handleVerify = async () => {
-    setError(null);
+  const handleVerify = async (data: FPWS2Data) => {
     setLoading(true);
+    setError("code", { type: "server", message: "" });
     try {
-      await axios.post("/api/accounts/verify-reset-code/", {
+      const code = data.code.trim();
+      await api.post("accounts/verify-reset-code/", {
         identifier: formData.identifier,
         code,
       });
       setFormData({ code });
       nextStep();
-    } catch (err: any) {
-      setError(
-        err.response?.data?.code?.[0] ||
-          err.response?.data?.detail ||
-          "Invalid code"
-      );
+    } catch (error: any) {
+      const res = error.response?.data;
+      if (res) {
+        if (Array.isArray(res.code) && res.code.length > 0) {
+          setError("code", { type: "server", message: res.code[0] });
+        } else if (Array.isArray(res.identifier) && res.identifier.length > 0) {
+          setError("code", { type: "server", message: res.identifier[0] });
+        } else if (res.detail) {
+          const msg = Array.isArray(res.detail) ? res.detail[0] : res.detail;
+          setError("code", { type: "server", message: msg });
+        } else {
+          setError("code", {
+            type: "server",
+            message: "Something went wrong. Please try again.",
+          });
+        }
+      } else {
+        setError("code", {
+          type: "server",
+          message: "Unable to reach server. Please check your connection.",
+        });
+      }
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <div className="form">
+    <form onSubmit={handleSubmit(handleVerify)} className="form">
       <div className="header">
         <h2>Account recovery</h2>
         <p>
@@ -73,19 +108,23 @@ const ForgotPwStep2 = () => {
         <input
           id="code"
           type="text"
-          value={code}
-          onChange={(e) => setCode(e.target.value)}
+          placeholder="Enter code"
           disabled={loading}
+          {...register("code")}
         />
-        {error && <p className="text-danger">{error}</p>}
+        {errors.code && <p className="text-danger">{errors.code.message}</p>}
       </div>
       <div className="footer">
         <div className="resend">
           <button
             type="button"
             onClick={triggerResend}
-            disabled={timer > 0}
-            className="link-button"
+            disabled={timer > 0 || loading}
+            className={`text-sm underline ${
+              timer > 0
+                ? "opacity-50 cursor-not-allowed"
+                : "hover:text-gray-300"
+            }`}
           >
             {timer > 0 ? `Resend code in ${timer}s` : "Resend code"}
           </button>
@@ -94,14 +133,15 @@ const ForgotPwStep2 = () => {
           Prev
         </button>
         <button
-          type="button"
-          onClick={handleVerify}
-          disabled={!code.trim() || loading}
+          type="submit"
+          disabled={loading}
+          aria-busy={loading}
+          className="px-4 py-2 bg-blue-600 rounded hover:bg-blue-700 disabled:opacity-50 flex items-center justify-center"
         >
           {loading ? "Verifying…" : "Verify"}
         </button>
       </div>
-    </div>
+    </form>
   );
 };
 

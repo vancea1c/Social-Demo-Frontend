@@ -1,11 +1,12 @@
 import React, { useState, useEffect, FormEvent } from "react";
-import api from "../../api";
 import { UserProfile } from "../../contexts/types";
 import { z } from "zod";
 import CropModal, { CropModalProps } from "../CropModal";
 import { RiCameraAiLine } from "react-icons/ri";
 import { X } from "react-feather";
 import useMediaManager, { CropState } from "../useMediaManager";
+import { useUserProfiles } from "../../contexts/UserProfilesContext";
+import { useAuth } from "../AuthContext";
 
 const editProfileSchema = z.object({
   name: z
@@ -43,6 +44,10 @@ const EditProfileForm: React.FC<EditProfileFormProps> = ({
     null
   );
 
+  const { patchProfile, updateProfile: updateUserProfileContext } =
+    useUserProfiles();
+  const { updateProfile: updateAuthProfile, user } = useAuth();
+
   const coverOriginal = coverManager.originalPreviews[0] || null;
   const coverPreview =
     coverManager.previews[0] || (removedCover ? null : initialData.cover_image);
@@ -55,6 +60,8 @@ const EditProfileForm: React.FC<EditProfileFormProps> = ({
     bio?: string;
   }>({});
   const [submitting, setSubmitting] = useState(false);
+
+  const hasErrors = !!fieldErrors.name || !!fieldErrors.bio;
 
   // validation
   const handleNameChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -137,11 +144,14 @@ const EditProfileForm: React.FC<EditProfileFormProps> = ({
       formData.append("profile_image", profileManager.files[0]);
     try {
       setSubmitting(true);
-      const res = await api.patch(`profile/${initialData.username}/`, formData);
-      onSave(res.data as UserProfile);
+      const updated = await patchProfile(initialData.username, formData);
+      if (user?.username === initialData.username) {
+        updateAuthProfile(updated);
+      }
+      onSave(updated);
       onClose();
     } catch (err) {
-      console.error(err);
+      console.error("Edit profile failed:", err);
     } finally {
       setSubmitting(false);
     }
@@ -195,7 +205,7 @@ const EditProfileForm: React.FC<EditProfileFormProps> = ({
             <h2 className="text-xl text-white">Edit Profile</h2>
             <button
               onClick={handleSubmit}
-              disabled={submitting}
+              disabled={submitting || hasErrors}
               className="px-4 py-1 text-white rounded-full"
             >
               {submitting ? "Saving…" : "Save"}

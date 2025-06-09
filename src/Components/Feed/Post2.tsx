@@ -11,6 +11,8 @@ import PostMenu from "./PostMenu";
 import ConfirmDialog from "./ConfirmDialog";
 import RepostMenu from "./RepostMenu";
 import ComposeModal from "../Widgets/ComposeModal";
+import { UserProfile } from "../../contexts/types";
+import VideoCard from "../VideoCard";
 
 export interface MediaType {
   id: number;
@@ -39,13 +41,18 @@ export interface PostProps {
 
 const Post: React.FC<PostProps> = (initialProps) => {
   const { post, setPost } = usePostSync(initialProps);
-  const { state: syncState, registerPost } = usePostSyncContext();
+  const {
+    state: syncState,
+    registerPost,
+    unregisterPost,
+  } = usePostSyncContext();
   const { user, profile: myProfile } = useAuth();
-  const { profiles, fetchProfile } = useUserProfiles();
+  const {
+    profiles,
+    fetchProfile,
+    updateProfile: updateUserProfileContext,
+  } = useUserProfiles();
   const navigate = useNavigate();
-  if (!user) {
-    return <div>Loading…</div>;
-  }
   const {
     id,
     avatar_url,
@@ -61,12 +68,7 @@ const Post: React.FC<PostProps> = (initialProps) => {
     disableNavigate = false,
   } = post;
 
-  useEffect(() => {
-    if (username !== user.username && !profiles[username]) {
-      fetchProfile(username).catch(console.error);
-    }
-  }, [username, user.username, profiles, fetchProfile]);
-  const isMe = username === user.username;
+  const isMe = username === user?.username;
   const authorProfile = isMe ? myProfile : profiles[username];
   const avatarSrc = authorProfile?.profile_image ?? avatar_url;
   const nameToShow = authorProfile?.name ?? display_name;
@@ -74,9 +76,9 @@ const Post: React.FC<PostProps> = (initialProps) => {
   useEffect(() => {
     if ((type === "repost" || type === "quote") && parent != null) {
       if (!syncState.posts[parent]) {
-        console.log(
-          `[Post Component] Fetching parent post id=${parent} for repost/quote id=${id}`
-        );
+        // console.log(
+        //   `[Post Component] Fetching parent post id=${parent} for repost/quote id=${id}`
+        // );
         fetchPost(parent)
           .then((res) => registerPost(res.data))
           .catch(console.error);
@@ -84,18 +86,31 @@ const Post: React.FC<PostProps> = (initialProps) => {
     }
   }, [type, parent, syncState.posts, registerPost]);
 
+  // Load author profile once for other users
+  useEffect(() => {
+    if (!isMe && !profiles[username]) {
+      fetchProfile(username)
+        .then((p: UserProfile) => {
+          updateUserProfileContext(p);
+        })
+        .catch(console.error);
+    }
+  }, [username, isMe, profiles, fetchProfile, updateUserProfileContext]);
+
+  if (!user) return <div>Loading…</div>;
+
   const parentData = parent != null ? syncState.posts[parent] : null;
-  console.log(
-    `[Post Component] Render post id=${id} type=${type} parent=${parent} parentData=`,
-    parentData
-  );
+  // console.log(
+  //   `[Post Component] Render post id=${id} type=${type} parent=${parent} parentData=`,
+  //   parentData
+  // );
   const [showCompose, setShowCompose] = useState<{
     mode: "post" | "quote" | "reply";
     parentId?: number;
   } | null>(null);
 
   function getTimeLabel(dateStr: string): string {
-    const date = new Date(created_at);
+    const date = new Date(dateStr);
     const diffMs = Date.now() - date.getTime();
     const minutesAgo = Math.floor(diffMs / (1000 * 60));
     if (minutesAgo < 1) return "Now";
@@ -127,9 +142,7 @@ const Post: React.FC<PostProps> = (initialProps) => {
     try {
       await api.delete(`/posts/${id}/`);
       setShowDelete(false);
-      // WS va scoate din feed automat (post_delete),
-      // Dacă vrei instant local, poți și manual:
-      // dispatch({ type: "UNREGISTER", id });
+      unregisterPost(id);
     } catch (err) {
       setShowDelete(false);
       alert("Eroare la ștergere!");
@@ -144,14 +157,14 @@ const Post: React.FC<PostProps> = (initialProps) => {
 
   // 5) ramura repost
   if (type === "repost" && parentData) {
-    console.log(
-      "[Post Component] Rendering REPOST. post.id:",
-      id,
-      "parent:",
-      parent,
-      "parentData:",
-      parentData
-    );
+    // console.log(
+    //   "[Post Component] Rendering REPOST. post.id:",
+    //   id,
+    //   "parent:",
+    //   parent,
+    //   "parentData:",
+    //   parentData
+    // );
     const reposterName = isMe ? "You" : nameToShow;
     return (
       <div className="flex flex-col hover:bg-gray-800">
@@ -183,10 +196,17 @@ const Post: React.FC<PostProps> = (initialProps) => {
             onClick={(e) => {
               e.preventDefault();
               e.stopPropagation();
+              navigate(`/${post.username}`);
             }}
             src={avatarSrc}
             alt={`${nameToShow} avatar`}
-            className="w-12 h-12 rounded-full mr-4"
+            className="w-12 h-12 rounded-full mr-4 
+
+            transition-all
+            duration-100 ease-linear
+            hover:scale-120
+            hover:shadow-[0_0_10px_#ffffff]
+            "
           />
 
           <div className="flex-1">
@@ -234,6 +254,7 @@ const Post: React.FC<PostProps> = (initialProps) => {
                     open={showDelete}
                     onConfirm={handleDelete}
                     onCancel={() => setShowDelete(false)}
+                    text="Are you sure you want to delete this?"
                   />
                 </div>
                 // <button
@@ -262,19 +283,14 @@ const Post: React.FC<PostProps> = (initialProps) => {
                         className="rounded max-h-80 object-cover"
                       />
                     ) : (
-                      <video
-                        key={m.id}
-                        src={m.file}
-                        controls
-                        className="rounded max-h-80 object-cover"
-                      />
+                      <VideoCard key={m.id} src={m.file} />
                     )
                   )}
                 </div>
               )}
 
               {/* quote */}
-              {initialProps.type === "quote" &&
+              {post.type === "quote" &&
                 parentData &&
                 parentData.id !== post.id &&
                 (parentData.type === "quote" ? (
@@ -283,6 +299,7 @@ const Post: React.FC<PostProps> = (initialProps) => {
                     onClick={(e) => {
                       e.preventDefault();
                       e.stopPropagation();
+
                       navigate(
                         `/${parentData.username}/posts/${parentData.id}`
                       );
@@ -309,6 +326,7 @@ const Post: React.FC<PostProps> = (initialProps) => {
                     onClick={(e) => {
                       e.preventDefault();
                       e.stopPropagation();
+                      e.stopPropagation();
                       navigate(
                         `/${parentData.username}/posts/${parentData.id}`
                       );
@@ -317,7 +335,7 @@ const Post: React.FC<PostProps> = (initialProps) => {
                     <Post {...parentData} hideInteractive disableNavigate />
                   </div>
                 ))}
-              {initialProps.type === "quote" &&
+              {post.type === "quote" &&
                 parentData &&
                 parentData.id === post.id && (
                   <div className="text-red-500">
@@ -328,23 +346,28 @@ const Post: React.FC<PostProps> = (initialProps) => {
 
             {/* Butoane */}
             {!hideInteractive && (
-              <div className="flex justify-center gap-40 mt-3 text-gray-600 text-sm">
+              <div className="flex justify-center gap-[25%] mt-3 text-gray-600 text-sm ">
                 <div
                   onClick={(e) => {
                     e.preventDefault();
                     e.stopPropagation();
-                    if (!disableNavigate) {
+                    if (
+                      !disableNavigate &&
+                      type !== "quote" &&
+                      type !== "reply"
+                    ) {
                       setShowCompose({
                         mode: "reply",
                         parentId: parentData ? parentData.id : post.id,
                       });
+                    } else {
+                      setShowCompose({
+                        mode: "reply",
+                        parentId: post.id,
+                      });
                     }
-                    setShowCompose({
-                      mode: "reply",
-                      parentId: post.id,
-                    });
                   }}
-                  className="cursor-pointer flex items-center space-x-1 "
+                  className="cursor-pointer flex items-center space-x-1 p-1 bg-[#1A1A1A] hover:bg-gray-200 rounded-full"
                 >
                   <MessageCircle size={18} />
                   {comments_count > 0 && <span>{comments_count}</span>}
@@ -371,7 +394,7 @@ const Post: React.FC<PostProps> = (initialProps) => {
                     e.stopPropagation();
                     toggle();
                   }}
-                  className="cursor-pointer flex items-center space-x-1"
+                  className="cursor-pointer space-x-1 p-1 bg-[#1A1A1A] hover:bg-gray-200 hover:text-red-500 rounded-full flex items-center"
                 >
                   <Heart className={liked ? "text-red-500" : ""} />
                   {count > 0 && <span>{count}</span>}
@@ -394,8 +417,8 @@ const Post: React.FC<PostProps> = (initialProps) => {
             setPost(updatedParent);
             setShowCompose(null);
           }}
-          onQuote={(counts) => {
-            setPost(counts);
+          onQuote={(updatedParent) => {
+            setPost(updatedParent);
             setShowCompose(null);
           }}
         />
