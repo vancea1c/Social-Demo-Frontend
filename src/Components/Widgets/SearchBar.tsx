@@ -1,71 +1,75 @@
 import React, { useState, useEffect, useRef, ChangeEvent } from "react";
-import api from "../../api"; // your axios wrapper
-import ProfileCard, { Profile } from "./ProfileCard";
+import api from "../../api";
+import { useDebounce } from "../../hooks/useDebounce";
+import ProfileSearchCard from "./ProfileSearchCard";
+import { UserProfile } from "../../contexts/types";
+import { useUserProfiles } from "../../contexts/UserProfilesContext";
+import { useNavigate } from "react-router-dom";
 
 const SearchBar: React.FC = () => {
   const [query, setQuery] = useState("");
-  const [results, setResults] = useState<Profile[]>([]);
+  const debouncedQuery = useDebounce(query, 400);
+  const [results, setResults] = useState<UserProfile[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const dropdownRef = useRef<HTMLDivElement>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
+
+  const { profiles, updateProfile } = useUserProfiles();
+  const navigate = useNavigate();
 
   useEffect(() => {
-    if (query.trim() === "") {
+    if (!debouncedQuery.trim()) {
       setResults([]);
       setLoading(false);
       setError(null);
       return;
     }
 
+    const controller = new AbortController();
     setLoading(true);
     setError(null);
-    const controller = new AbortController();
 
-    const fetchProfiles = async () => {
-      try {
-        const response = await api.get<{ results: Profile[] }>("profile/", {
-          params: { search: query.trim() },
-          signal: controller.signal,
-        });
-        const data: Profile[] = Array.isArray(response.data)
-          ? response.data
-          : response.data.results;
-        setResults(data);
-        setLoading(false);
-      } catch (err: any) {
-        if (err.code === "ERR_CANCELED" || err.name === "CanceledError") {
-          return;
-        }
+    api
+      .get<{ results: UserProfile[] }>("profile/", {
+        params: { search: debouncedQuery.trim() },
+        signal: controller.signal,
+      })
+      .then((res) => {
+        const users = Array.isArray(res.data)
+          ? (res.data as UserProfile[])
+          : res.data.results;
+        users
+          .filter((u) => !profiles[u.username])
+          .forEach((u) => updateProfile(u));
+        setResults(users);
+      })
+      .catch((err) => {
+        if (err.name === "CanceledError") return;
         console.error("Search error:", err);
-        setError("Failed to fetch results.");
+        setError("Couldn’t load results.");
         setResults([]);
+      })
+      .finally(() => {
         setLoading(false);
-      }
-    };
-
-    const timer = setTimeout(() => {
-      fetchProfiles();
-    }, 400);
+      });
 
     return () => {
-      clearTimeout(timer);
       controller.abort();
     };
-  }, [query]);
+  }, [debouncedQuery, updateProfile]);
 
-  // Close dropdown when clicking outside
   useEffect(() => {
-    const handleClickOutside = (e: MouseEvent) => {
+    const onClickOutside = (e: MouseEvent) => {
       if (
-        dropdownRef.current &&
-        !dropdownRef.current.contains(e.target as Node)
+        containerRef.current &&
+        !containerRef.current.contains(e.target as Node)
       ) {
         setResults([]);
       }
     };
-    document.addEventListener("mousedown", handleClickOutside);
+    document.addEventListener("mousedown", onClickOutside);
     return () => {
-      document.removeEventListener("mousedown", handleClickOutside);
+      document.removeEventListener("mousedown", onClickOutside);
     };
   }, []);
 
@@ -74,85 +78,53 @@ const SearchBar: React.FC = () => {
   };
 
   return (
-    <div className="relative w-full">
+    <div ref={containerRef} className="relative w-full">
       <input
         type="search"
-        placeholder="Search people"
         value={query}
         onChange={onChange}
+        placeholder="Search people"
         className="
-          w-full 
-          px-4 py-2 
-          mb-2 
-          rounded-full 
-          border 
-          border-gray-700 
-          bg-gray-900 
-          text-white 
-          text-base 
-          focus:outline-none 
+          w-full px-4 py-2 rounded-full border border-gray-700
+          bg-gray-900 text-white text-base focus:outline-none
           placeholder-gray-500
         "
       />
 
       {(loading || error || results.length > 0) && (
         <div
-          ref={dropdownRef}
           className="
-            absolute 
-            top-full 
-            mt-1 
-            left-0 
-            right-0 
-            bg-gray-900 
-            border 
-            border-gray-700 
-            rounded-lg 
-            max-h-72 
-            overflow-y-auto 
-            z-50 
-            shadow-lg
+            absolute top-full mt-1 left-0 right-0
+            bg-gray-900 border border-gray-700 rounded-lg
+            max-h-72 overflow-y-auto z-50 shadow-lg
           "
         >
           {loading && (
-            <div className="px-4 py-3 text-gray-400 italic">Searching…</div>
+            <div className="px-4 py-2 text-gray-400 italic">Searching…</div>
           )}
 
-          {error && !loading && (
-            <div className="px-4 py-3 text-red-500 italic">{error}</div>
+          {!loading && error && (
+            <div className="px-4 py-2 text-red-500 italic">{error}</div>
+          )}
+
+          {!loading && !error && results.length === 0 && (
+            <div className="px-4 py-2 text-gray-400 italic">
+              No results found.
+            </div>
           )}
 
           {!loading &&
             !error &&
-            results.length === 0 &&
-            query.trim() !== "" && (
-              <div className="px-4 py-3 text-gray-400 italic">
-                No results found.
-              </div>
-            )}
-
-          {!loading &&
-            !error &&
-            results.map((profile) => (
+            results.map((u) => (
               <div
-                key={profile.user.username}
-                className="
-                  flex 
-                  items-center 
-                  border-b 
-                  border-gray-700 
-                  px-4 py-2 
-                  cursor-pointer 
-                  hover:bg-gray-800
-                "
+                key={u.username}
                 onClick={() => {
-                  // Example: navigate or handle click
-                  console.log("Clicked:", profile.user.username);
+                  navigate(`/${u.username}`);
                   setQuery("");
                   setResults([]);
                 }}
               >
-                <ProfileCard profile={profile} />
+                <ProfileSearchCard profile={u} />
               </div>
             ))}
         </div>

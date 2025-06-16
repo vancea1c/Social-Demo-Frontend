@@ -1,7 +1,7 @@
 import React, { useState, FormEvent } from "react";
 import { createPost, replyToPost, quotePost, fetchPost } from "../api";
 import { PostProps } from "./Feed/Post2";
-import useMediaManager from "./useMediaManager";
+import useMediaManager from "../hooks/useMediaManager";
 import CropModal from "./CropModal";
 import { ArrowLeft, ArrowRight, X } from "react-feather";
 
@@ -24,7 +24,6 @@ const PostForm: React.FC<PostFormProps> = ({
   onReply,
   onQuote,
 }) => {
-  // Folosim hook-ul centralizat pentru fișiere & crop
   const {
     files,
     previews,
@@ -51,7 +50,6 @@ const PostForm: React.FC<PostFormProps> = ({
 
   const canSubmit = text.trim().length > 0 || files.length > 0;
 
-  // Când user alege fișiere
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const selected = e.target.files ? Array.from(e.target.files) : [];
     e.target.value = "";
@@ -60,14 +58,12 @@ const PostForm: React.FC<PostFormProps> = ({
     setSliderIndex(0);
   };
 
-  // Șterge fișier la click
   const handleRemove = (i: number) => {
     removeFile(i);
     setCurrentIndex((ci) => Math.max(0, Math.min(ci, previews.length - 2)));
     setSliderIndex((si) => Math.max(0, Math.min(si, previews.length - 2)));
   };
 
-  // Deschide modal și backup crop state
   const openModal = (i: number) => {
     openCrop(i);
     setCurrentIndex(i);
@@ -75,7 +71,6 @@ const PostForm: React.FC<PostFormProps> = ({
     setShowModal(true);
   };
 
-  // Anulează și închide
   const handleCancel = () => {
     rollback();
     setShowModal(false);
@@ -105,7 +100,6 @@ const PostForm: React.FC<PostFormProps> = ({
         const { data: updatedParent } = await fetchPost(parentId);
         onQuote?.(updatedParent);
       } else {
-        // a brand-new post (no parent)
         await createPost(text, files);
       }
 
@@ -134,7 +128,6 @@ const PostForm: React.FC<PostFormProps> = ({
         />
         {error && <p className="text-red-500">{error}</p>}
 
-        {/* preview-uri */}
         {previews.length > 0 && (
           <div className="relative w-full h-[290px] bg-back-800 overflow-hidden rounded">
             {!showModal && sliderIndex > 0 && (
@@ -156,7 +149,6 @@ const PostForm: React.FC<PostFormProps> = ({
                 <ArrowLeft size={13} />
               </button>
             )}
-            {/* slides wrapper */}
             <div
               className="flex h-full transition-transform duration-200"
               style={{ transform: `translateX(-${sliderIndex * 50}%)` }}
@@ -284,9 +276,7 @@ const PostForm: React.FC<PostFormProps> = ({
           onSaveState={(state) => saveCrop(currentIndex, state)}
           onCancel={handleCancel}
           onApply={async (state) => {
-            // persist this image's state first
             saveCrop(currentIndex, state);
-            // then crop every image that has a state
             for (let i = 0; i < cropStates.length; i++) {
               const cs = i === currentIndex ? state : cropStates[i];
               if (cs?.area) {

@@ -1,7 +1,9 @@
 import { NavLink } from "react-router-dom";
-import { Home, Bell, Mail, Settings, User } from "react-feather";
+import { Home, Bell, Settings, User, Users } from "react-feather";
 import LogOutButton from "./home_page/LogOutButton";
-import { useAuth } from "./AuthContext";
+import { useAuth } from "../contexts/AuthContext";
+import { useNotifications } from "../contexts/NotificationsContext";
+import { useFriendRequests } from "../contexts/FriendRequestsContext";
 
 interface NavItem {
   to: string;
@@ -14,6 +16,9 @@ interface SidebarProps {
 
 const Sidebar: React.FC<SidebarProps> = ({ onComposeClick }) => {
   const { user, isReady, profile } = useAuth();
+  const { unreadCount } = useNotifications();
+  const { received } = useFriendRequests();
+  const hasIncomingRequests = received.length > 0;
 
   if (!isReady) return <div className="p-4">Loading sidebar…</div>;
   if (!user || !profile)
@@ -24,15 +29,36 @@ const Sidebar: React.FC<SidebarProps> = ({ onComposeClick }) => {
 
   const navItems: NavItem[] = [
     { to: "/home", label: "Home", Icon: Home },
-    // { to: "", label: "Notifications", Icon: Bell },
-    // { to: "", label: "Messages", Icon: Mail },
+    {
+      to: "/notifications",
+      label: "Notifications",
+      Icon: (props) => (
+        <div className="relative">
+          <Bell
+            {...props}
+            className={unreadCount > 0 ? "text-gray-50 animate-pulse" : ""}
+          />
+        </div>
+      ),
+    },
+    {
+      to: "/friend_requests",
+      label: "Friend Requests",
+      Icon: (props) => (
+        <div className="relative">
+          <Users
+            {...props}
+            className={hasIncomingRequests ? "text-gray-50 animate-pulse" : ""}
+          />
+        </div>
+      ),
+    },
     { to: "/settings", label: "Settings", Icon: Settings },
     { to: `/${user.username}`, label: "Profile", Icon: User },
   ];
 
   return (
     <div>
-      {/* Navigation links */}
       <ul>
         {navItems.map(({ to, label, Icon }) => (
           <li key={to}>
@@ -46,23 +72,17 @@ const Sidebar: React.FC<SidebarProps> = ({ onComposeClick }) => {
               }
             >
               <Icon />
-              <span>{label}</span>
+              <span className="hidden sm:inline">{label}</span>
             </NavLink>
           </li>
         ))}
       </ul>
-
-      {/* Post button */}
       <button
         onClick={onComposeClick}
         className="mt-4 w-full bg-blue-500 hover:bg-blue-600 text-white py-2 rounded-full transition"
       >
         Post
       </button>
-
-      {/* Current user box with logout */}
-
-      {/* Current user + logout */}
       <div className="mt-auto flex- items-center space-x-3 hover:bg-gray-800 p-2 rounded-full transition cursor-pointer">
         <img
           className="w-10 h-10 rounded-full object-cover"

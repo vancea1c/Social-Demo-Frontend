@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from "react";
-import "../../GreetingPage.css";
+import "./../../styles/GreetingPage.css";
 import { useNavigate } from "react-router-dom";
 interface TypingAnimationProps {
   onReadyForPhysics?: (nodes: React.ReactNode[]) => void;

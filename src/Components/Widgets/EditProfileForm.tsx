@@ -4,9 +4,9 @@ import { z } from "zod";
 import CropModal, { CropModalProps } from "../CropModal";
 import { RiCameraAiLine } from "react-icons/ri";
 import { X } from "react-feather";
-import useMediaManager, { CropState } from "../useMediaManager";
+import useMediaManager, { CropState } from "../../hooks/useMediaManager";
 import { useUserProfiles } from "../../contexts/UserProfilesContext";
-import { useAuth } from "../AuthContext";
+import { useAuth } from "../../contexts/AuthContext";
 
 const editProfileSchema = z.object({
   name: z
@@ -63,7 +63,6 @@ const EditProfileForm: React.FC<EditProfileFormProps> = ({
 
   const hasErrors = !!fieldErrors.name || !!fieldErrors.bio;
 
-  // validation
   const handleNameChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const val = e.target.value;
     setName(val);
@@ -115,12 +114,10 @@ const EditProfileForm: React.FC<EditProfileFormProps> = ({
   };
   const onCropCancel = () => {
     if (cropTarget === "cover") {
-      // Discard the tmp cover and restore initial
       coverManager.clearAll();
       setRemovedCover(false);
     }
     if (cropTarget === "profile") {
-      // Discard the tmp avatar and restore initial
       profileManager.clearAll();
     }
     setCropTarget(null);
@@ -197,7 +194,6 @@ const EditProfileForm: React.FC<EditProfileFormProps> = ({
     <>
       <div className="fixed inset-0 z-50 flex items-start md:items-center justify-center p-4 bg-white/50">
         <div className="bg-black rounded-xl w-full max-w-2xl overflow-auto shadow-xl">
-          {/* HEADER */}
           <div className="flex items-center justify-between p-4 border-b border-gray-700">
             <button onClick={onClose} disabled={submitting}>
               Cancel
@@ -212,7 +208,6 @@ const EditProfileForm: React.FC<EditProfileFormProps> = ({
             </button>
           </div>
           <div className="p-4 space-y-4">
-            {/* cover image cu icon „camera” */}
             <div
               className={`relative h-60 rounded-lg overflow-hidden ${
                 removedCover || !(coverPreview || initialData.cover_image)
@@ -253,7 +248,6 @@ const EditProfileForm: React.FC<EditProfileFormProps> = ({
                 className="hidden"
               />
             </div>
-            {/* avatar */}
             <div className="relative w-40 h-40 -mt-20 ml-4 rounded-full border-4 border-black overflow-hidden">
               <img
                 src={profilePreview}

@@ -1,6 +1,6 @@
 import React, { useState, FormEvent } from "react";
 import PasswordInput from "../Password2"; // path to the existing PasswordInput
-import { useAuth } from "../AuthContext";
+import { useAuth } from "../../contexts/AuthContext";
 
 const ChangePasswordForm: React.FC = () => {
   const { changePassword } = useAuth(); // your auth context’s function

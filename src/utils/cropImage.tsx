@@ -1,9 +1,6 @@
-// src/utils/cropImage.ts
+
 import { Area } from "react-easy-crop";
 
-/**
- * Taie o zonă dintr-o imagine și returnează un Blob
- */
 export async function getCroppedImg(
   imageSrc: string,
   pixelCrop: Area

@@ -1,4 +1,3 @@
-// src/contexts/PageTitleContext.tsx
 import React, { createContext, useContext, useState, ReactNode } from "react";
 
 interface PageTitleContextValue {
@@ -21,14 +20,12 @@ export const PageTitleProvider: React.FC<{ children: ReactNode }> = ({
   );
 };
 
-// Custom hook for pages to set the title
 export const usePageTitle = (newTitle: string | null) => {
   const context = useContext(PageTitleContext);
   if (!context) {
     throw new Error("usePageTitle must be used inside a PageTitleProvider");
   }
 
-  // When a page mounts, we register the title. When it unmounts, clear the title.
   React.useEffect(() => {
     context.setTitle(newTitle);
     return () => {
@@ -39,7 +36,6 @@ export const usePageTitle = (newTitle: string | null) => {
   return null;
 };
 
-// Hook to read the current title inside Layout
 export const useCurrentTitle = (): string | null => {
   const context = useContext(PageTitleContext);
   if (!context) {

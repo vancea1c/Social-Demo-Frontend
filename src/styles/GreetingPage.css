@@ -1,6 +1,6 @@
 @import "tailwindcss";
 @import "./tailwind.css";
-@config "../tailwind.config.cjs";
+@config "../../tailwind.config.cjs";
 
 @layer components {
   .cursor1 {

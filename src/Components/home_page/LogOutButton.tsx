@@ -1,5 +1,5 @@
 import { GrLogout } from "react-icons/gr";
-import { useAuth } from "../AuthContext";
+import { useAuth } from "../../contexts/AuthContext";
 
 const LogOutButton = () => {
   const { signOut } = useAuth();

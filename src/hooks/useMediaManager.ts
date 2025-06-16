@@ -26,7 +26,6 @@ export default function useMediaManager({
   const [cropStates, setCropStates] = useState<(CropState | undefined)[]>([]);
   const backupCropStates = useRef<(CropState | undefined)[]>([]);
 
-  // Add new files
   const addFiles = useCallback(
     (selected: File[]) => {
       const valid = selected.filter(
@@ -34,19 +33,16 @@ export default function useMediaManager({
       );
       if (!valid.length) return;
 
-      // generate object URLs for originals
       const newOriginalUrls = valid.map((f) => URL.createObjectURL(f));
       setOriginalPreviews((prev) =>
         [...prev, ...newOriginalUrls].slice(0, maxFiles)
       );
-      // compute aspects
       Promise.all(newOriginalUrls.map(getImageAspect))
         .then((newAspects) => {
           setAspects((prev) => [...prev, ...newAspects].slice(0, maxFiles));
         })
         .catch(() => {});
 
-      // update files & reset crop states
       setFiles((prev) => {
         const next = [...prev, ...valid].slice(0, maxFiles);
         setCropStates((cs) =>
@@ -58,7 +54,6 @@ export default function useMediaManager({
     [maxFiles, maxVideoSizeBytes]
   );
 
-  // rebuild previews whenever files change
   useEffect(() => {
     previews.forEach(URL.revokeObjectURL);
     const newPreviews = files.map((f) => URL.createObjectURL(f));
@@ -104,7 +99,6 @@ export default function useMediaManager({
     setCropStates([]);
   }, [files, previews, originalPreviews]);
 
-  // Crop modal lifecycle
   const openCrop = useCallback(
     (idx: number) => {
       backupCropStates.current = cropStates.slice();
@@ -124,7 +118,6 @@ export default function useMediaManager({
     setCropStates(backupCropStates.current);
   }, []);
 
-  // our new doCrop takes the exact CropState you want it to save
   const doCrop = useCallback(
     async (idx: number, area: Area, cs: CropState) => {
       const src = originalPreviews[idx];
@@ -137,7 +130,6 @@ export default function useMediaManager({
         next[idx] = URL.createObjectURL(blob);
         return next;
       });
-      // *persist exactly* the CS you passed in
       saveCrop(idx, { ...cs, area });
     },
     [originalPreviews, replaceFile, saveCrop]

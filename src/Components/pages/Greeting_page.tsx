@@ -7,11 +7,11 @@ const Greeting_page = () => {
     null
   );
 
-  // Define one spawn point per node:
+
   const x = window.innerWidth / 2;
   const y = window.innerHeight / 2;
   const fallSpawns = [
-    { x: x, y: y - 100 }, // first node drops from x=100,y=-50
+    { x: x, y: y - 100 }, 
     { x: x, y: y - 100 },
     { x: x - 50, y: y - 100 },
     { x: x + 50, y: y - 100 },
@@ -28,7 +28,6 @@ const Greeting_page = () => {
           {physicsNodes.map((node, i) => (
             <FallingItem
               key={i}
-              // if you have more nodes than spawns, fall back to the container default:
               spawnPoint={fallSpawns[i] ?? undefined}
             >
               {node}

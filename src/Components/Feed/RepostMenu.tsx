@@ -3,7 +3,8 @@ import React, { Fragment } from "react";
 import { Menu, Transition } from "@headlessui/react";
 import { Repeat } from "react-feather"; // retweet icon
 import { PostProps } from "./Post2";
-import { useToggleRepost } from "../useToggleRepost";
+import { useToggleRepost } from "../../hooks/useToggleRepost";
+import { motion } from "framer-motion";
 interface RepostMenuProps {
   post: PostProps;
   onQuote: () => void;
@@ -36,7 +37,15 @@ const RepostMenu: React.FC<RepostMenuProps> = ({
         />
         {count > 0 && (
           <span className="ml-1 text-sm font-medium text-gray-800">
-            {count}
+            <motion.span
+              key={count}
+              initial={{ opacity: 0, y: -5 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: 5 }}
+              transition={{ duration: 0.3 }}
+            >
+              {count}
+            </motion.span>
           </span>
         )}
       </Menu.Button>

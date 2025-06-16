@@ -1,7 +1,7 @@
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { signInSchema, SignInData } from "../schemas/signInSchema";
-import { useAuth } from "../AuthContext";
+import { useAuth } from "../../contexts/AuthContext";
 import { useNavigate } from "react-router-dom";
 import { FaEye, FaEyeSlash } from "react-icons/fa";
 import { useState } from "react";
@@ -32,7 +32,6 @@ const SignInForm = () => {
       const resp = error.response?.data;
       if (resp) {
         setLoading(false);
-        // ② mapare erori server pe câmpuri
         for (const field of ["identifier", "password"] as const) {
           if (resp[field]) {
             const msg = Array.isArray(resp[field])
@@ -41,7 +40,6 @@ const SignInForm = () => {
             setError(field, { type: "server", message: msg });
           }
         }
-        // ③ dacă mesajul de password e exact „Incorrect password.”, afișăm Forgot
         const pwErr = Array.isArray(resp.password)
           ? resp.password[0]
           : resp.password;
@@ -87,7 +85,7 @@ const SignInForm = () => {
                 style={{
                   position: "absolute",
                   right: "0.5rem",
-                  top: "2.2rem", // ajustează după stilul tău
+                  top: "2.2rem",
                   background: "transparent",
                   border: "none",
                   cursor: "pointer",

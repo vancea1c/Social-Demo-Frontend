@@ -9,7 +9,7 @@ import {
 } from "react";
 import { jwtDecode } from "jwt-decode";
 import api from "../api";
-import { AuthUser, UserProfile } from "../contexts/types";
+import { AuthUser, UserProfile } from "./types";
 
 type DecodedJwt = { exp: number; [key: string]: any };
 
@@ -86,7 +86,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         { refresh: storedRefresh },
         { withCredentials: false }
       );
-      // Expected shape: { access: string, refresh?: string }
+
       const { access: newAccess, refresh: newRefresh } = resp.data;
 
       if (newAccess) {
@@ -123,10 +123,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
     let decoded: DecodedJwt;
     try {
-      // jwt_decode returns an object; we only care about exp (UNIX time in seconds)
       decoded = jwtDecode(token);
     } catch {
-      // If decoding fails, just bail out
       return;
     }
 
@@ -135,14 +133,12 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     }
     const expMillis = decoded.exp * 1000;
     const now = Date.now();
-    const refreshAt = expMillis - 60 * 1000; // one minute before actual expiry
+    const refreshAt = expMillis - 60 * 1000;
     const msUntilRefresh = refreshAt - now;
 
     if (msUntilRefresh <= 0) {
-      // If we’re already within that one-minute window (or past it), refresh now
       doRefresh();
     } else {
-      // Otherwise, schedule a timer to refresh 1 minute before expiry
       console.log("Scheduling refresh in", msUntilRefresh, "ms");
       refreshTimeoutRef.current = setTimeout(() => {
         doRefresh();
@@ -191,10 +187,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         password,
       });
       const { access, refresh } = response.data;
-      // salvează doar access+refresh
       localStorage.setItem("accessToken", access);
       localStorage.setItem("refreshToken", refresh);
-      // console.log(">>> signIn stored:", localStorage.getItem("accessToken"));
       api.defaults.headers.common.Authorization = `Bearer ${access}`;
 
       setToken(access);
@@ -220,7 +214,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       throw new Error("User is not authenticated.");
     }
     try {
-      // Call your backend’s “change password” endpoint
       await api.post("accounts/change_password/", {
         password: oldPassword,
         newPassword: newPassword,
@@ -268,7 +261,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 };
 
-// Hook personalizat pentru a accesa contextul
 export const useAuth = () => {
   const context = useContext(AuthContext);
   if (!context) {

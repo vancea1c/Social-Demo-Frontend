@@ -1,11 +1,11 @@
 import React, { useEffect, useState } from "react";
 import { MessageCircle, Repeat, Heart } from "react-feather";
 import api, { fetchPost } from "../../api";
-import { useAuth } from "../AuthContext";
+import { useAuth } from "../../contexts/AuthContext";
 import { usePostSyncContext } from "../../contexts/PostSyncContext";
 import { useUserProfiles } from "../../contexts/UserProfilesContext";
-import { useToggleLike } from "../useToggleLike";
-import { usePostSync } from "../usePostSync";
+import { useToggleLike } from "../../hooks/useToggleLike";
+import { usePostSync } from "../../hooks/usePostSync";
 import { Link, useNavigate } from "react-router-dom";
 import PostMenu from "./PostMenu";
 import ConfirmDialog from "./ConfirmDialog";
@@ -13,6 +13,7 @@ import RepostMenu from "./RepostMenu";
 import ComposeModal from "../Widgets/ComposeModal";
 import { UserProfile } from "../../contexts/types";
 import VideoCard from "../VideoCard";
+import { motion } from "framer-motion";
 
 export interface MediaType {
   id: number;
@@ -22,9 +23,9 @@ export interface MediaType {
 
 export interface PostProps {
   id: number;
-  avatar_url: string; // nou
-  display_name: string; // nou
-  username: string; // nou
+  avatar_url: string;
+  display_name: string;
+  username: string;
   type: "post" | "repost" | "quote" | "reply";
   parent: number | null;
   created_at: string;
@@ -40,7 +41,7 @@ export interface PostProps {
 }
 
 const Post: React.FC<PostProps> = (initialProps) => {
-  const { post, setPost } = usePostSync(initialProps);
+  const { post, updatePost } = usePostSync(initialProps);
   const {
     state: syncState,
     registerPost,
@@ -235,20 +236,11 @@ const Post: React.FC<PostProps> = (initialProps) => {
                   {getTimeLabel(created_at)}
                 </span>
               </div>
-              {!hideInteractive && (
+              {!hideInteractive && isMe && (
                 <div className="flex items-center space-x-1">
                   <PostMenu
-                    isMe={isMe}
                     type={post.type}
                     onDelete={() => setShowDelete(true)}
-                    onAddFriend={() => {
-                      // TODO: Pune logica de Add Friend (API)
-                      alert("Friend request sent (mock)");
-                    }}
-                    onBlock={() => {
-                      // TODO: Pune logica de Block (API)
-                      alert("User blocked (mock)");
-                    }}
                   />
                   <ConfirmDialog
                     open={showDelete}
@@ -370,7 +362,17 @@ const Post: React.FC<PostProps> = (initialProps) => {
                   className="cursor-pointer flex items-center space-x-1 p-1 bg-[#1A1A1A] hover:bg-gray-200 rounded-full"
                 >
                   <MessageCircle size={18} />
-                  {comments_count > 0 && <span>{comments_count}</span>}
+                  {comments_count > 0 && (
+                    <motion.span
+                      key={comments_count}
+                      initial={{ opacity: 0, y: -5 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      exit={{ opacity: 0, y: 5 }}
+                      transition={{ duration: 0.3 }}
+                    >
+                      {comments_count}
+                    </motion.span>
+                  )}
                 </div>
                 <div
                   className="flex items-center space-x-1"
@@ -397,7 +399,17 @@ const Post: React.FC<PostProps> = (initialProps) => {
                   className="cursor-pointer space-x-1 p-1 bg-[#1A1A1A] hover:bg-gray-200 hover:text-red-500 rounded-full flex items-center"
                 >
                   <Heart className={liked ? "text-red-500" : ""} />
-                  {count > 0 && <span>{count}</span>}
+                  {count > 0 && (
+                    <motion.span
+                      key={count}
+                      initial={{ opacity: 0, y: -5 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      exit={{ opacity: 0, y: 5 }}
+                      transition={{ duration: 0.3 }}
+                    >
+                      {count}
+                    </motion.span>
+                  )}
                 </div>
               </div>
             )}
@@ -414,11 +426,11 @@ const Post: React.FC<PostProps> = (initialProps) => {
             setShowCompose(null);
           }}
           onReply={(updatedParent) => {
-            setPost(updatedParent);
+            updatePost(updatedParent);
             setShowCompose(null);
           }}
           onQuote={(updatedParent) => {
-            setPost(updatedParent);
+            updatePost(updatedParent);
             setShowCompose(null);
           }}
         />

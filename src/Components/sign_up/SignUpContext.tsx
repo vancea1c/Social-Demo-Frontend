@@ -68,13 +68,10 @@ export const SignUpProvider = ({ children }: SignUpProviderProps) => {
 
   const setFormData = (newData: Partial<SignUpFormData>) => {
     setFormDataState((prev) => {
-      // Unim ce e nou cu prev
       const updated = { ...prev, ...newData };
-      // Verificăm dacă vreo valoare chiar s-a schimbat
       const hasChanged = Object.keys(newData).some(
         (key) => (newData as any)[key] !== (prev as any)[key]
       );
-      // Dacă nu s-a schimbat nimic, nu rerandăm
       if (!hasChanged) return prev;
       return updated;
     });

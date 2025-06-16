@@ -4,14 +4,11 @@ import React, {
   ReactNode,
   useState,
   useEffect,
+  useRef,
 } from "react";
-import api, {
-  fetchUserProfile,
-  fetchMyProfile,
-  updateUserProfile,
-} from "../api";
+import { fetchUserProfile, fetchMyProfile, updateUserProfile } from "../api";
 import { UserProfile } from "./types";
-import { useAuth } from "../Components/AuthContext";
+import { useAuth } from "./AuthContext";
 
 interface UserProfilesContextType {
   profiles: Record<string, UserProfile>;
@@ -33,8 +30,10 @@ export const UserProfilesProvider: React.FC<{ children: ReactNode }> = ({
 }) => {
   const [profiles, setProfiles] = useState<Record<string, UserProfile>>({});
   const { token, isReady } = useAuth();
+  const hasFetchedMe = useRef(false);
   useEffect(() => {
-    if (!token || !isReady) return;
+    if (!token || !isReady || hasFetchedMe.current) return;
+    hasFetchedMe.current = true;
     fetchMyProfile()
       .then((me) => setProfiles((prev) => ({ ...prev, [me.username]: me })))
       .catch(() => {});
@@ -63,7 +62,9 @@ export const UserProfilesProvider: React.FC<{ children: ReactNode }> = ({
     setProfiles((prev) => ({ ...prev, [username]: updated }));
     return updated;
   };
-  console.log("%c USER PROFILES:", "color: yellow;", profiles);
+  useEffect(() => {
+    console.log("%c USER PROFILES:", "color: yellow;", profiles);
+  }, [profiles]);
   return (
     <UserProfilesContext.Provider
       value={{

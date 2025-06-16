@@ -1,9 +1,9 @@
 import React, { useEffect, useState } from "react";
 import { MessageCircle, Repeat, Heart, MoreHorizontal } from "react-feather";
 import api from "../../api";
-import { useToggleLike } from "../useToggleLike";
+import { useToggleLike } from "../../hooks/useToggleLike";
 import { useFeedRefresh } from "../../contexts/FeedRefreshContext";
-import { usePostSync } from "../usePostSync";
+import { usePostSync } from "../../hooks/usePostSync";
 import RepostMenu from "./RepostMenu";
 import ComposeModal from "../Widgets/ComposeModal";
 

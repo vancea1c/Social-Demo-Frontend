@@ -58,7 +58,6 @@ const ComposeModal: React.FC<ComposeModalProps> = ({
             onClose();
           }}
         />
-        {/* Dacă e quote, arătăm un mic banner */}
         {mode === "quote" && parentId && parentPost && (
           <Post
             {...(parentPost as PostProps)}
@@ -66,7 +65,6 @@ const ComposeModal: React.FC<ComposeModalProps> = ({
             disableNavigate
           ></Post>
         )}
-        {/* Dacă e reply, similar */}
         {mode === "reply" && parentPost && (
           <div className="mt-4 px-3 py-2 bg-gray-900 rounded">
             <p className="text-gray-400 text-sm mb-2">

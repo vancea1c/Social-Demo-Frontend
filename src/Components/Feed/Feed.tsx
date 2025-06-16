@@ -2,15 +2,15 @@ import React, { useEffect } from "react";
 import PostInput from "./PostInput";
 import Post, { PostProps } from "./Post2";
 import { usePostSyncContext } from "../../contexts/PostSyncContext";
+import { useFilteredFeed } from "../../hooks/useFilteredFeed";
 import { fetchPosts } from "../../api";
 import { usePageTitle } from "../../contexts/PageTitleContext";
 
-// Sortare descrescător după dată
 const sortByDate = (a: PostProps, b: PostProps) =>
   new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
 
 const Feed: React.FC = () => {
-  const { state, replaceWithFeed } = usePostSyncContext();
+  const { replaceWithFeed } = usePostSyncContext();
   usePageTitle(" Live Feed");
 
   useEffect(() => {
@@ -33,7 +33,7 @@ const Feed: React.FC = () => {
     });
   }, [replaceWithFeed]);
 
-  const posts = Object.values(state.posts).sort(sortByDate);
+  const posts = useFilteredFeed().sort(sortByDate);
   console.log(
     "[Feed] Posts to render:",
     posts.map((p) => ({
@@ -50,11 +50,9 @@ const Feed: React.FC = () => {
   return (
     <main>
       <PostInput />
-      {posts.map((p) =>
-        p.type !== "reply" && typeof p.id === "number" ? (
-          <Post key={`${p.type}-${p.id}`} {...p} />
-        ) : null
-      )}
+      {posts.map((p) => (
+        <Post key={`${p.type}-${p.id}`} {...p} />
+      ))}
       <div style={{ height: "50vh" }} />
     </main>
   );

@@ -16,4 +16,5 @@ export interface UserProfile {
   gender: string;
   date_joined: string;
   friends_count?: number;
+  are_friends?: boolean;
 }

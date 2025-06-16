@@ -1,13 +1,19 @@
 import axios from "axios";
 import { PostProps } from "./Components/Feed/Post2";
 import { UserProfile } from "./contexts/types";
+import { Notification } from "./contexts/NotificationsContext";
+import { FriendRequest } from "./contexts/FriendRequestsContext";
 const api = axios.create({
-  baseURL: "http://localhost:8000/api/", // URL-ul backend-ului tău Django+DRF
-  withCredentials: true, // să trimită cookie-ul de sesiune
+  baseURL: "http://localhost:8000/api/",
+  withCredentials: true, 
 });
 
-type Paginated<T> = { results: T[] };
-// Injector de header pentru fiecare request
+interface Paginated<T> {
+  count: number;
+  next: string | null;
+  previous: string | null;
+  results: T[];
+}
 api.interceptors.request.use((cfg) => {
   const token = localStorage.getItem("accessToken");
   if (token && cfg.headers) {
@@ -22,7 +28,6 @@ export interface ReplyResponse extends PostProps {
   parent_post: PostProps;
 }
 
-// (opțional) auto-refresh la 401:
 api.interceptors.response.use(
   (res) => res,
   async (err) => {
@@ -54,6 +59,10 @@ export const updateUserProfile = (
     .patch<UserProfile>(`/profile/${username}/`, payload)
     .then((res) => res.data);
 
+export const fetchLikedPosts = () => {
+  return api.get<Paginated<PostProps>>("/posts/liked/").then((res) => res.data);
+};
+
 export const fetchPost = (id: number) => {
   // console.log(`[API] fetchPost id=${id}`);
   return api.get<PostProps>(`/posts/${id}/`).then((res) => {
@@ -63,7 +72,7 @@ export const fetchPost = (id: number) => {
 };
 
 export const fetchPosts = (params?: { type?: string }) => {
-  // console.log(`[API] fetchPosts`, params);
+  //console.log(`[API] fetchPosts`, params);
   return api
     .get<PostProps[] | Paginated<PostProps>>("/posts/", { params })
     .then((res) => {
@@ -76,11 +85,14 @@ export const fetchUserPosts = (username: string, page: number = 1) => {
     .get<Paginated<PostProps>>(
       `/posts/?author__username=${username}&page=${page}`
     )
-    .then((res) => res.data); // return only the data, not the full AxiosResponse
+    .then((res) => res.data);
 };
 
-export const fetchReplies = (id: number) =>
-  api.get<PostProps[]>(`/posts/?type=reply&parent=${id}`);
+export const fetchReplies = (parentId: number) => {
+  return api
+    .get<Paginated<PostProps>>(`/posts/?type=reply&parent=${parentId}`)
+    .then((res) => res.data);
+};
 
 export const createPost = (description: string, uploads: File[]) => {
   // console.log(`[API] createPost`, { description, uploads });
@@ -114,7 +126,6 @@ export const quotePost = (
 ) => {
   const form = new FormData();
   form.append("description", description);
-  // presupunem că pe backend accepţi un câmp numit "uploads"
   uploads.forEach((f) => form.append("uploads", f));
   return api.post<PostProps>(`/posts/${postId}/quote/`, form, {
     headers: { "Content-Type": "multipart/form-data" },
@@ -129,20 +140,65 @@ export const repostPost = (postId: number) => {
   });
 };
 
-// Like / Unlike
-export const likePost = (id: number) => {
-  // console.log(`[API] likePost id=${id}`);
-  return api.post<PostProps>(`/posts/${id}/like/`).then((res) => {
-    // console.log(`[API] likePost RESULT id=${id}:`, res.data);
-    return res;
-  });
+
+export const likePost = (id: number) =>
+  api.post<PostProps>(`/posts/${id}/like/`).then((res) => res.data);
+
+export const unlikePost = (id: number) =>
+  api.delete<PostProps>(`/posts/${id}/like/`).then((res) => res.data);
+
+
+export const fetchNotifications = (
+  page: number = 1
+): Promise<Paginated<Notification>> =>
+  api
+    .get<Paginated<Notification>>("/notifications/", { params: { page } })
+    .then((res) => res.data);
+
+export const fetchUnreadNotifications = (
+  page: number = 1
+): Promise<Paginated<Notification>> =>
+  api
+    .get<Paginated<Notification>>("/notifications/unread/", {
+      params: { page },
+    })
+    .then((res) => res.data);
+
+export const fetchUnreadCount = (): Promise<{ unread: number }> =>
+  api
+    .get<{ unread: number }>("/notifications/unread_count/")
+    .then((res) => res.data);
+
+export const markAllNotificationsRead = (): Promise<{ marked: number }> =>
+  api
+    .post<{ marked: number }>("/notifications/mark_all_read/")
+    .then((res) => res.data);
+
+export const toggleNotificationRead = (id: number): Promise<Notification> =>
+  api
+    .post<Notification>(`/notifications/${id}/toggle_read/`)
+    .then((res) => res.data);
+
+export const sendFriendRequest = (to_username: string) =>
+  api.post<FriendRequest>(`/friend-requests/`, { to_user: to_username });
+
+export const fetchFriendRequests = (): Promise<{
+  sent: FriendRequest[];
+  received: FriendRequest[];
+}> => {
+  return api.get("/friend-requests/mine/").then((res) => res.data);
 };
-export const unlikePost = (id: number) => {
-  // console.log(`[API] unlikePost id=${id}`);
-  return api.delete<PostProps>(`/posts/${id}/like/`).then((res) => {
-    // console.log(`[API] unlikePost RESULT id=${id}:`, res.data);
-    return res;
-  });
+export const acceptFriendRequest = (id: number) =>
+  api.patch(`/friend-requests/${id}/accept/`);
+
+export const rejectFriendRequest = (id: number) =>
+  api.patch(`/friend-requests/${id}/reject/`);
+
+export const cancelFriendRequest = (id: number) =>
+  api.delete(`/friend-requests/${id}/cancel/`);
+
+export const removeFriend = async (username: string) => {
+  await api.post("/friend-requests/remove/", { username });
 };
 
 export default api;

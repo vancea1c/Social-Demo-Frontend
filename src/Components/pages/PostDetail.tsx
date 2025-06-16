@@ -1,11 +1,11 @@
 import { useEffect } from "react";
-import { useParams, Navigate } from "react-router-dom";
+import { useParams } from "react-router-dom";
 import { fetchPost, fetchReplies } from "../../api";
 import Post from "../Feed/Post2";
 import { PostProps } from "../Feed/Post2";
 import PostForm from "../PostForm2";
 import { usePostSyncContext } from "../../contexts/PostSyncContext";
-import { useAuth } from "../AuthContext";
+import { useAuth } from "../../contexts/AuthContext";
 import { useUserProfiles } from "../../contexts/UserProfilesContext";
 import { usePageTitle } from "../../contexts/PageTitleContext";
 
@@ -20,7 +20,7 @@ const PostDetail = () => {
 
   usePageTitle(`Post`);
 
-  // console.log("PostSyncContext state on PostDetail:", state);
+  console.log("PostSyncContext state on PostDetail:", state);
 
   useEffect(() => {
     if (!id) return;
@@ -32,8 +32,10 @@ const PostDetail = () => {
         ]);
         replaceWithPostDetail({
           post: postRes.data,
-          replies: replyRes.data,
-          links: { [postRes.data.id]: replyRes.data.map((r) => r.id) },
+          replies: replyRes.results ?? [],
+          links: {
+            [postRes.data.id]: (replyRes.results ?? []).map((r) => r.id),
+          },
         });
       } catch (err) {
         console.error("Failed to load post detail:", err);
@@ -46,8 +48,9 @@ const PostDetail = () => {
   // console.log("[PostDetail] postId", id, "post", post);
 
   const replies = (
-    state.links[post?.id || 0]?.map((id) => state.posts[id]).filter(Boolean) ||
-    []
+    state.links[post?.id || 0]
+      ?.map((id) => state.posts[id])
+      .filter((p) => p.type === "reply") || []
   ).sort(sortByDate);
 
   useEffect(() => {
@@ -78,11 +81,7 @@ const PostDetail = () => {
           <span className="mr-1 ">Replying to</span>
           <span className="text-sky-600">@{post.username}</span>
         </div>
-        <PostForm
-          // aceste props TREBUIE să existe în PostForm2 ca write-only
-          parentId={post.id}
-          type={"reply"}
-        />
+        <PostForm parentId={post.id} type={"reply"} />
       </div>
       <div className="space-y-4">
         {replies.length === 0 ? (

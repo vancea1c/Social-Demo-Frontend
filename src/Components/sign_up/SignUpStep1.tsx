@@ -7,7 +7,7 @@ import BirthDate from "./BirthDate";
 const SignUpStep1 = () => {
   const { nextStep, formData, setFormData } = useSignUpContext();
 
-  // 1) Creăm methods și le trimitem mai departe prin FormProvider
+
   const methods = useForm<Step1Data>({
     mode: "onChange",
     resolver: zodResolver(step1Schema),
@@ -23,7 +23,7 @@ const SignUpStep1 = () => {
     },
   });
 
-  // 2) Destructurăm doar ce ne trebuie în acest scope
+
   const {
     handleSubmit,
     register,
@@ -39,7 +39,7 @@ const SignUpStep1 = () => {
       parseInt(day, 10)
     )
       .toISOString()
-      .split("T")[0]; // "YYYY-MM-DD"
+      .split("T")[0]; 
 
     setFormData({
       ...rest,

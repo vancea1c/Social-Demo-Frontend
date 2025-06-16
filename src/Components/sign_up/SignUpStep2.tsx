@@ -3,7 +3,7 @@ import axios from "axios";
 import { useSignUpContext } from "./SignUpContext";
 import PasswordInput from "../Password2";
 import { useState } from "react";
-import { useAuth } from "../AuthContext";
+import { useAuth } from "../../contexts/AuthContext";
 
 function SignUpStep2() {
   const { signIn } = useAuth();

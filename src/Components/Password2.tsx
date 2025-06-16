@@ -8,7 +8,6 @@ import React, {
 import { FaEye, FaEyeSlash } from "react-icons/fa";
 import { motion, AnimatePresence } from "framer-motion";
 
-// -------------------- Validation helpers --------------------
 export interface PasswordChecks {
   length: boolean;
   number: boolean;
@@ -32,7 +31,6 @@ export function isPasswordValid(pw: string): boolean {
   return c.length && c.number && c.uppercase && c.lowercase && c.symbol;
 }
 
-// -------------------- Component props --------------------
 interface PasswordInputProps {
   onValidPassword: (password: string) => void;
   showError?: boolean;
@@ -40,7 +38,6 @@ interface PasswordInputProps {
   serverError?: string | null;
 }
 
-// -------------------- Main component --------------------
 const PasswordInput: React.FC<PasswordInputProps> = ({
   onValidPassword,
   showError: externalShowError,
@@ -50,7 +47,6 @@ const PasswordInput: React.FC<PasswordInputProps> = ({
   const groupRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
-  // Local state
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [isFocused, setIsFocused] = useState(false);
@@ -58,7 +54,6 @@ const PasswordInput: React.FC<PasswordInputProps> = ({
   const [touched, setTouched] = useState(false);
   const [localShowError, setLocalShowError] = useState(false);
 
-  // Derived
   const checks = validatePassword(password);
   const overallValid = isPasswordValid(password);
   const matches = password === confirmPassword;
@@ -68,17 +63,16 @@ const PasswordInput: React.FC<PasswordInputProps> = ({
     (!overallValid && ((externalShowError ?? false) || localShowError)) ||
     Boolean(serverError);
 
-  // Notify parent when fully valid
   useEffect(() => {
     if (allValid) onValidPassword(password);
   }, [allValid, onValidPassword, password]);
 
-  // Clear local error once valid
+
   useEffect(() => {
     if (overallValid) setLocalShowError(false);
   }, [overallValid]);
 
-  // Handlers
+
   const handlePasswordChange = (e: ChangeEvent<HTMLInputElement>) => {
     if (localShowError) setLocalShowError(false);
     setPassword(e.target.value);
@@ -87,42 +81,37 @@ const PasswordInput: React.FC<PasswordInputProps> = ({
     setConfirmPassword(e.target.value);
   };
 
-  // ① Focus/Blur pe întreg grupul
   const handleGroupEvent = (e: FocusEvent<HTMLDivElement>) => {
     if (e.type === "focus") {
       setIsFocused(true);
       return;
     }
-    // blur
     const related = (e.relatedTarget as Node) || document.activeElement;
     if (groupRef.current?.contains(related as Node)) {
-      // focusul a rămas în grup → nu facem nimic
       return;
     }
-    // chiar am ieșit
     setIsFocused(false);
-    if (!touched && hasAnyInput) setTouched(true); //afisam lista de reguli daca s a tastat ceva
-    if (!overallValid && hasAnyInput) setLocalShowError(true); // afisam cu rosu invalid password
+    if (!touched && hasAnyInput) setTouched(true); 
+    if (!overallValid && hasAnyInput) setLocalShowError(true); 
   };
 
   const toggleVisibility = () => {
     if (!inputRef.current) {
-      // fallback: doar inversăm dacă nu avem ref
+
       setShowPassword((prev) => !prev);
       return;
     }
 
-    // 1️⃣ salvezi poziția cursorului înainte de toggle
+
     const start = inputRef.current.selectionStart;
     const end = inputRef.current.selectionEnd;
 
-    // 2️⃣ schimbi vizibilitatea
+
     setShowPassword((prev) => !prev);
 
-    // 3️⃣ readuci focus-ul și poziția cursorului
     setTimeout(() => {
       inputRef.current!.focus();
-      // refaci selecția doar dacă există valori
+
       if (start !== null && end !== null) {
         inputRef.current!.setSelectionRange(start, end);
       }
@@ -132,12 +121,11 @@ const PasswordInput: React.FC<PasswordInputProps> = ({
   return (
     <div className="relative max-w-md">
       {serverError && <p className="text-red-600 mb-2">{serverError}</p>}
-      {/* ─── Password group ─── */}
       <div
         ref={groupRef}
-        tabIndex={-1} // face div-ul focusable
-        onFocus={handleGroupEvent} // both focus
-        onBlur={handleGroupEvent} // and blur calls
+        tabIndex={-1} 
+        onFocus={handleGroupEvent} 
+        onBlur={handleGroupEvent} 
         className="mb-4 password-group"
       >
         <label
@@ -169,7 +157,6 @@ const PasswordInput: React.FC<PasswordInputProps> = ({
           </button>
         </div>
 
-        {/* ─── Criteria list ─── */}
         {hasAnyInput && (isFocused || touched) && (
           <AnimatePresence mode="wait">
             <motion.div
@@ -218,8 +205,6 @@ const PasswordInput: React.FC<PasswordInputProps> = ({
           </AnimatePresence>
         )}
       </div>
-
-      {/* ─── Confirm-password ─── */}
       <div>
         <label htmlFor="confirmPassword" className="font-medium">
           Confirm {title}
@@ -243,7 +228,6 @@ const PasswordInput: React.FC<PasswordInputProps> = ({
   );
 };
 
-// Sub-component pentru criterii
 interface ConditionProps {
   text: string;
   ok: boolean;
