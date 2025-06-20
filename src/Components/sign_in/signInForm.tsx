@@ -77,7 +77,7 @@ const SignInForm = () => {
                 {...register("password")}
               />
               {errors.password && (
-                <p className="text-danger">{errors.password.message}</p>
+                <p className="text-red-600">{errors.password.message}</p>
               )}
               <button
                 type="button"

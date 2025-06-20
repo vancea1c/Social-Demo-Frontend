@@ -10,9 +10,7 @@ export function useFilteredFeed(): PostProps[] {
   const { user, profile: myProfile } = useAuth();
   const { profiles } = useUserProfiles();
 
-  // ALWAYS call useMemo at the top level
   const filtered = useMemo(() => {
-    // it’s fine to early-return *inside* the memo
     if (!user) return [];
 
     return Object.values(state.posts).filter((p) => {
